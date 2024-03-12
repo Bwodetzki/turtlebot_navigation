@@ -5,9 +5,11 @@ https://stackoverflow.com/questions/8997099/algorithm-to-generate-random-2d-poly
 
 import math, random
 from typing import List, Tuple
+import pybullet as p
 from PIL import Image, ImageDraw
 import numpy as np
 import matplotlib.pyplot as plt
+import simulation as sim
 
 
 # Functions
@@ -141,6 +143,28 @@ def plot_obstacle(center, edge_lengths, angle):
     plt.plot(obs[:, 0], obs[:, 1], 'g')
     plt.plot([obs[0, 0], obs[-1, 0]], [obs[0, 1], obs[-1, 1]], 'g')
 
+def load_boundary(vertices):
+    wallHeight = 1
+    precision = 0.05
+    maxDim = np.max(abs(vertices))
+    heightFieldDim = 2*math.ceil(maxDim/precision)
+    heightfield = np.zeros((heightFieldDim, heightFieldDim))
+    for idx in range(-1, np.size(vertices, axis=0)-1):
+        vertex1 = vertices[idx, :]
+        vertex2 = vertices[idx+1, :]
+        diff = vertex2 - vertex1
+        dist = np.sqrt(np.dot(diff, diff))
+        direction = diff/dist
+        for step in range(math.ceil(dist/precision)):
+            worldCoords = vertex1 + step*precision*direction
+            x, y = worldCoords/precision + np.array([heightFieldDim/2, heightFieldDim/2])
+            x = clip(round(x), 0, heightFieldDim-1)
+            y = clip(round(y), 0, heightFieldDim-1)
+            heightfield[x,y] = wallHeight
+    heightfield = heightfield.flatten()
+    boundary_shape = p.createCollisionShape(shapeType = p.GEOM_HEIGHTFIELD, meshScale=[precision, precision, 1], heightfieldData=heightfield, numHeightfieldRows=heightFieldDim, numHeightfieldColumns=heightFieldDim)
+    boundary  = p.createMultiBody(0, boundary_shape)
+    p.resetBasePositionAndOrientation(boundary,[0,0,0], [0,0,0,1])
 
 def main():
     center = (0,0)
@@ -158,12 +182,13 @@ def main():
     centers, edge_lengths, angles = generate_obstacles()
     for center, edge_length, angle in zip(centers, edge_lengths, angles):
         plot_obstacle(center, edge_length, angle)
-
     
     plt.show()
 
-
-
+    sim.create_sim()
+    load_boundary(vertices)
+    while(True):
+        pass
 
 # Main code
 if __name__=='__main__':
