@@ -6,7 +6,7 @@ def angle_diff(theta1, theta2):
     diff = theta2 - theta1
     return np.arctan2(np.sin(diff), np.cos(diff))
 
-def corntroller_v1(target_pos, turtlebot_id, max_vel=10, eps=1e-1):
+def controller_v1(target_pos, turtlebot_id, max_vel=10, eps=1e-1):
     ''' 
     Velocity controller for turtlebot.
 
@@ -52,7 +52,7 @@ def corntroller_v1(target_pos, turtlebot_id, max_vel=10, eps=1e-1):
     return (leftWheelVelocity, rightWheelVelocity)
 
 
-def corntroller_v2(target_pos, turtlebot_id, a=5, max_vel=10, eps=1e-2):
+def controller_v2(target_pos, turtlebot_id, a=5, max_vel=10, eps=1e-2):
     ''' 
     Velocity controller for turtlebot with more natural movement.
     Key idea: instead of a hard cutoff at epsilon when turning and going straight, one should use a smooth function to transtition between the two. An exponential is a reasonable choice. 
@@ -124,7 +124,7 @@ if __name__=='__main__':
         speed=10
 
         # Find Wheel Velocities
-        leftWheelVelocity, rightWheelVelocity = corntroller_v2(target, turtle, max_vel=speed)
+        leftWheelVelocity, rightWheelVelocity = controller_v2(target, turtle, max_vel=speed)
 
         # Update Turtle Bot
         p.setJointMotorControl2(turtle,0,p.VELOCITY_CONTROL,targetVelocity=leftWheelVelocity,force=1000)
