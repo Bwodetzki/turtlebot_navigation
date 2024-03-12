@@ -10,6 +10,7 @@ from PIL import Image, ImageDraw
 import numpy as np
 import matplotlib.pyplot as plt
 import simulation as sim
+import time
 
 
 # Functions
@@ -115,12 +116,37 @@ def visualize(vertices):
 
     # now you can save the image (img), or do whatever else you want with it.
 
-def generate_obstacles(center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=1, n=20):
+def generate_obstacles(center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=1, n=2, max_iters=1000):
     bounding_box = np.array([[0, 0], center_bounds])
-    np.random.seed(seed)
-    centers = (2*np.random.rand(n, 2)-1)*bounding_box[1, :]
-    edge_lengths = np.random.rand(n, 2)*(edge_len_bounds[1]-edge_len_bounds[0]) + edge_len_bounds[0]
-    angles = (2*np.random.rand(n) - 1)*np.pi
+    # np.random.seed(seed)
+    
+    centers = np.zeros((n, 2))
+    edge_lengths = np.zeros((n, 2))
+    angles = np.zeros((n))
+
+    iters = 0
+    idx=0
+    while iters < max_iters:
+        # Generate Samples
+        center = (2*np.random.rand(2)-1)*bounding_box[1, :]
+        edge_length = np.random.rand(2)*(edge_len_bounds[1]-edge_len_bounds[0]) + edge_len_bounds[0]
+        angle = (2*np.random.rand() - 1)*np.pi
+
+        # Check Conditions
+        condition = all(abs(center) >= edge_len_bounds[1]/2)
+        if condition:
+            # Store Samples
+            centers[idx, :] = center
+            edge_lengths[idx, :] = edge_length
+            angles[idx] = angle
+            # Udpate Index
+            idx+=1
+            # Check if sol found
+            if idx==n:
+                break
+        iters+=1
+    
+    assert (iters != max_iters)  # Did not converge in the given # of iterations
 
     return (centers, edge_lengths, angles)
 
@@ -166,6 +192,14 @@ def load_boundary(vertices):
     boundary  = p.createMultiBody(0, boundary_shape)
     p.resetBasePositionAndOrientation(boundary,[0,0,0], [0,0,0,1])
 
+def load_obstacles(center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=0, n=20):
+    centers, edge_lengths, angles = generate_obstacles(center_bounds, edge_len_bounds, seed, n)
+    for center, edge_length, angle in zip(centers, edge_lengths, angles):
+        center = np.concatenate((center, [1/2]))
+        edge_length = np.concatenate((edge_length, [1]))
+        angle = [0, 0, angle]
+        sim.create_box(center, edge_length, angle)
+
 def main():
     center = (0,0)
     avg_radius = 10
@@ -182,13 +216,20 @@ def main():
     centers, edge_lengths, angles = generate_obstacles()
     for center, edge_length, angle in zip(centers, edge_lengths, angles):
         plot_obstacle(center, edge_length, angle)
-    
-    plt.show()
+    plt.show()  # The plots shown are not the same layout in the sim below
 
+    # Lets test this out:
     sim.create_sim()
+    load_obstacles(n=20)
     load_boundary(vertices)
-    while(True):
-        pass
+
+    forward=0
+    turn=0
+    while True:
+        time.sleep(1./240.)
+
+        leftWheelVelocity, rightWheelVelocity, forward, turn = sim.keyboard_control(forward, turn)
+        sim.step_sim(leftWheelVelocity, rightWheelVelocity)
 
 # Main code
 if __name__=='__main__':
