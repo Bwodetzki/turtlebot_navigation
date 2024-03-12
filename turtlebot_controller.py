@@ -112,7 +112,7 @@ if __name__=='__main__':
 
     p.setGravity(0,0,-10)
 
-    target = np.array([-5, 1, 0])  # Set the target for the turtlebot here
+    target = np.array([-1, -1, 0])  # Set the target for the turtlebot here
 
     while (1):
         time.sleep(1./240.)
