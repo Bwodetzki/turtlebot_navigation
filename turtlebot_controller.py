@@ -1,6 +1,7 @@
 import pybullet as p
 import numpy as np
 import time
+import simulation as sim
 
 def angle_diff(theta1, theta2):
     diff = theta2 - theta1
@@ -103,14 +104,7 @@ def controller_v2(target_pos, turtlebot_id, a=5, max_vel=10, eps=1e-2):
 
 
 if __name__=='__main__':
-    p.connect(p.GUI)
-    turtle_offset = [0,0,0]
-
-    turtle = p.loadURDF("turtlebot.urdf",turtle_offset)
-    plane = p.loadURDF("plane.urdf")
-    p.setRealTimeSimulation(1)
-
-    p.setGravity(0,0,-10)
+    sim.create_sim()
 
     target = np.array([-5, 1, 0])  # Set the target for the turtlebot here
 
@@ -122,8 +116,7 @@ if __name__=='__main__':
         speed=10
 
         # Find Wheel Velocities
-        leftWheelVelocity, rightWheelVelocity = controller_v2(target, turtle, max_vel=speed)
+        leftWheelVelocity, rightWheelVelocity = controller_v2(target, sim.turtle, max_vel=speed)
 
         # Update Turtle Bot
-        p.setJointMotorControl2(turtle,0,p.VELOCITY_CONTROL,targetVelocity=leftWheelVelocity,force=1000)
-        p.setJointMotorControl2(turtle,1,p.VELOCITY_CONTROL,targetVelocity=rightWheelVelocity,force=1000)
+        sim.step_sim(leftWheelVelocity, rightWheelVelocity)
