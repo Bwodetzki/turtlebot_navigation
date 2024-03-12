@@ -109,7 +109,13 @@ def visualize(vertices):
     # now you can save the image (img), or do whatever else you want with it.
 
 def main():
-    vertices = generate_polygon((250,250), 100, 1.0, 0.3, 10)
+    center = (250,250)
+    avg_radius = 100
+    irregularity = 1.0
+    spikiness = 0.7
+    num_vertices = 10
+    vertices = generate_polygon(center, avg_radius, irregularity, spikiness, num_vertices)
+    
     plt.plot(vertices[:, 0], vertices[:, 1], 'b')
     plt.plot([vertices[0, 0], vertices[-1, 0]], [vertices[0, 1], vertices[-1, 1]], 'b')
     plt.show()
