@@ -16,7 +16,7 @@ obstacle = p.createCollisionShape(p.GEOM_BOX, halfExtents=[1, 1, 1])
 mass = 0  # Make body static
 p.createMultiBody(mass, obstacle, basePosition=[0, 3, 1], baseOrientation=quat)
 
-turtle = p.loadURDF("turtlebot.urdf",turtle_offset)
+turtle = p.loadURDF("turtlebot.urdf", [0, 0, 0])
 plane = p.loadURDF("plane.urdf")
 p.setRealTimeSimulation(1)
 

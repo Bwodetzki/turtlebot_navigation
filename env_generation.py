@@ -133,7 +133,7 @@ def generate_obstacles(center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=1,
         angle = (2*np.random.rand() - 1)*np.pi
 
         # Check Conditions
-        condition = all(abs(center) >= 1)
+        condition = all(abs(center) >= edge_len_bounds[1]/2)
         if condition:
             # Store Samples
             centers[idx, :] = center
@@ -203,11 +203,9 @@ def main():
     turn=0
     while True:
         time.sleep(1./240.)
-        
+
         leftWheelVelocity, rightWheelVelocity, forward, turn = sim.keyboard_control(forward, turn)
         sim.step_sim(leftWheelVelocity, rightWheelVelocity)
-
-
 
 # Main code
 if __name__=='__main__':
