@@ -108,17 +108,56 @@ def visualize(vertices):
 
     # now you can save the image (img), or do whatever else you want with it.
 
+def generate_obstacles(center_bounds=[100, 100], edge_len_bounds=[1, 20], seed=1, n=20):
+    bounding_box = np.array([[0, 0], center_bounds])  # [center, edge_lengths]
+    np.random.seed(seed)
+    centers = (2*np.random.rand(n, 2)-1)*bounding_box[1, :]
+    edge_lengths = np.random.randint(edge_len_bounds[0], edge_len_bounds[1], size=(n, 2))
+    angles = (2*np.random.rand(n) - 1)*np.pi
+
+    return (centers, edge_lengths, angles)
+
+def plot_obstacle(center, edge_lengths, angle):
+    x_len = edge_lengths[0]
+    y_len = edge_lengths[1]
+
+    x_cen = center[0]
+    y_cen = center[1]
+    
+    obs = np.array([[-x_len, -y_len],
+                    [-x_len, y_len],
+                    [x_len, y_len],
+                    [x_len, -y_len]])
+    
+    rot_mat = np.array([[np.cos(angle), -np.sin(angle)],
+                        [np.sin(angle), np.cos(angle)]])
+    obs = (rot_mat@obs.T).T + np.array([x_cen, y_cen])
+    
+    plt.plot(obs[:, 0], obs[:, 1], 'g')
+    plt.plot([obs[0, 0], obs[-1, 0]], [obs[0, 1], obs[-1, 1]], 'g')
+
+
 def main():
-    center = (250,250)
+    center = (0,0)
     avg_radius = 100
     irregularity = 1.0
-    spikiness = 0.7
+    spikiness = 0.4
     num_vertices = 10
     vertices = generate_polygon(center, avg_radius, irregularity, spikiness, num_vertices)
-    
+
+    # This is our barrier
     plt.plot(vertices[:, 0], vertices[:, 1], 'b')
     plt.plot([vertices[0, 0], vertices[-1, 0]], [vertices[0, 1], vertices[-1, 1]], 'b')
+
+    # These are our obstacles
+    centers, edge_lengths, angles = generate_obstacles()
+    for center, edge_length, angle in zip(centers, edge_lengths, angles):
+        plot_obstacle(center, edge_length, angle)
+
+    
     plt.show()
+
+
 
 
 # Main code

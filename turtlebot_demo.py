@@ -8,9 +8,10 @@ obs_offset = [-3, 0, 0]
 table = p.loadURDF("./table/table.urdf",obs_offset)
 
 # This creates a square, an easy command to automatically generate envs
+quat = p.getQuaternionFromEuler([30,45,0])
 obstacle = p.createCollisionShape(p.GEOM_BOX, halfExtents=[1, 1, 1])
 mass = 0  # Make body static
-p.createMultiBody(mass, obstacle, basePosition=[0, 3, 1])
+p.createMultiBody(mass, obstacle, basePosition=[0, 3, 1], baseOrientation=quat)
 
 turtle = p.loadURDF("turtlebot.urdf",turtle_offset)
 plane = p.loadURDF("plane.urdf")
