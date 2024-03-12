@@ -1,3 +1,8 @@
+'''
+generate_polygon(), random_angle_steps(), clip(), and visualize() taken from
+https://stackoverflow.com/questions/8997099/algorithm-to-generate-random-2d-polygon
+'''
+
 import math, random
 from typing import List, Tuple
 from PIL import Image, ImageDraw

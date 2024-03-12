@@ -1,10 +1,13 @@
-import pybullet as p
 import time
-p.connect(p.GUI)
-turtle_offset = [0,0,0]
-obs_offset = [-3, 0, 0]
+import pybullet as p
+import simulation as sim
+
+sim.create_sim()
+
+sim.create_box((0,3,1), (2,2,2))
 
 # Include Table
+obs_offset = [-3, 0, 0]
 table = p.loadURDF("./table/table.urdf",obs_offset)
 
 # This creates a square, an easy command to automatically generate envs
@@ -19,9 +22,10 @@ p.setRealTimeSimulation(1)
 
 for j in range (p.getNumJoints(turtle)):
         print(p.getJointInfo(turtle,j))
+for j in range (p.getNumJoints(sim.turtle)):
+        print(p.getJointInfo(sim.turtle,j))
 forward=0
 turn=0
-p.setGravity(0,0,-10)
 
 while (1):
         time.sleep(1./240.)
@@ -53,5 +57,4 @@ while (1):
         rightWheelVelocity+= (forward+turn)*speed
         leftWheelVelocity += (forward-turn)*speed
 
-        p.setJointMotorControl2(turtle,0,p.VELOCITY_CONTROL,targetVelocity=leftWheelVelocity,force=1000)
-        p.setJointMotorControl2(turtle,1,p.VELOCITY_CONTROL,targetVelocity=rightWheelVelocity,force=1000)
+        sim.step_sim(leftWheelVelocity, rightWheelVelocity)
