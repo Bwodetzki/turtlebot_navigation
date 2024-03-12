@@ -1,6 +1,7 @@
 import math, random
 from typing import List, Tuple
 from PIL import Image, ImageDraw
+import numpy as np
 
 
 # Functions
@@ -107,7 +108,12 @@ def visualize(vertices):
     # now you can save the image (img), or do whatever else you want with it.
 
 def main():
-    vertices = generate_polygon((250,250), 100, 1.0, 0.7, 10)
+    center = (250,250)
+    avg_radius = 100
+    irregularity = 1.0
+    spikiness = 0.7
+    num_vertices = 10
+    vertices = generate_polygon(center, avg_radius, irregularity, spikiness, num_vertices)
     visualize(vertices)
 
 
