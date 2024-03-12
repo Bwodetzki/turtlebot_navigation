@@ -106,7 +106,7 @@ def controller_v2(target_pos, turtlebot_id, a=5, max_vel=10, eps=1e-2):
 if __name__=='__main__':
     sim.create_sim()
 
-    target = np.array([-5, 1, 0])  # Set the target for the turtlebot here
+    target = np.array([-1, -1, 0])  # Set the target for the turtlebot here
 
     while (1):
         time.sleep(1./240.)

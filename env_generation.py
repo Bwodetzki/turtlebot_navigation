@@ -7,6 +7,7 @@ import math, random
 from typing import List, Tuple
 from PIL import Image, ImageDraw
 import numpy as np
+import matplotlib.pyplot as plt
 
 
 # Functions
@@ -54,12 +55,12 @@ def generate_polygon(center: Tuple[float, float], avg_radius: float,
     angle = random.uniform(0, 2 * math.pi)
     for i in range(num_vertices):
         radius = clip(random.gauss(avg_radius, spikiness), 0, 2 * avg_radius)
-        point = (center[0] + radius * math.cos(angle),
-                 center[1] + radius * math.sin(angle))
+        point = np.array((center[0] + radius * math.cos(angle),
+                 center[1] + radius * math.sin(angle)))
         points.append(point)
         angle += angle_steps[i]
 
-    return points
+    return np.array(points)
 
 def random_angle_steps(steps: int, irregularity: float) -> List[float]:
     """Generates the division of a circumference in random angles.
@@ -103,7 +104,7 @@ def visualize(vertices):
     draw = ImageDraw.Draw(img)
 
     # either use .polygon(), if you want to fill the area with a solid colour
-    draw.polygon(vertices, outline=black, fill=black)
+    draw.polygon(vertices, outline=black, fill=white)
 
     # or .line() if you want to control the line thickness, or use both methods together!
     # draw.line(vertices + [vertices[0]], width=2, fill=black)
@@ -117,7 +118,10 @@ def main():
     spikiness = 0.7
     num_vertices = 10
     vertices = generate_polygon(center, avg_radius, irregularity, spikiness, num_vertices)
-    visualize(vertices)
+    
+    plt.plot(vertices[:, 0], vertices[:, 1], 'b')
+    plt.plot([vertices[0, 0], vertices[-1, 0]], [vertices[0, 1], vertices[-1, 1]], 'b')
+    plt.show()
 
 
 # Main code
