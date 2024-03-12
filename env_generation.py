@@ -113,11 +113,11 @@ def visualize(vertices):
 
     # now you can save the image (img), or do whatever else you want with it.
 
-def generate_obstacles(center_bounds=[100, 100], edge_len_bounds=[1, 20], seed=1, n=20):
-    bounding_box = np.array([[0, 0], center_bounds])  # [center, edge_lengths]
+def generate_obstacles(center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=1, n=20):
+    bounding_box = np.array([[0, 0], center_bounds])
     np.random.seed(seed)
     centers = (2*np.random.rand(n, 2)-1)*bounding_box[1, :]
-    edge_lengths = np.random.randint(edge_len_bounds[0], edge_len_bounds[1], size=(n, 2))
+    edge_lengths = np.random.rand(n, 2)*(edge_len_bounds[1]-edge_len_bounds[0]) + edge_len_bounds[0]
     angles = (2*np.random.rand(n) - 1)*np.pi
 
     return (centers, edge_lengths, angles)
@@ -144,7 +144,7 @@ def plot_obstacle(center, edge_lengths, angle):
 
 def main():
     center = (0,0)
-    avg_radius = 100
+    avg_radius = 10
     irregularity = 1.0
     spikiness = 0.4
     num_vertices = 10
