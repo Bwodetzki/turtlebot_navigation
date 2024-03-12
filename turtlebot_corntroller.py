@@ -85,8 +85,6 @@ def corntroller_v2(target_pos, turtlebot_id, a=5, max_vel=10, eps=1e-2):
 
     desired_traj = target_pos - curr_pos
     desired_orn = np.arctan2(desired_traj[1], desired_traj[0])
-    # desired_orn = np.arctan(desired_traj[1]/desired_traj[0])
-
 
     # Check if at target
     if np.linalg.norm(desired_traj) < eps:
@@ -114,7 +112,7 @@ if __name__=='__main__':
 
     p.setGravity(0,0,-10)
 
-    target = np.array([-3, 1, 0])  # Set the target for the turtlebot here
+    target = np.array([-5, 1, 0])  # Set the target for the turtlebot here
 
     while (1):
         time.sleep(1./240.)
