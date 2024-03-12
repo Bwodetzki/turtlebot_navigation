@@ -1,3 +1,8 @@
+'''
+generate_polygon(), random_angle_steps(), clip(), and visualize() taken from
+https://stackoverflow.com/questions/8997099/algorithm-to-generate-random-2d-polygon
+'''
+
 import math, random
 from typing import List, Tuple
 from PIL import Image, ImageDraw
@@ -104,8 +109,6 @@ def visualize(vertices):
     # draw.line(vertices + [vertices[0]], width=2, fill=black)
 
     img.show()
-
-    # now you can save the image (img), or do whatever else you want with it.
 
 def main():
     center = (250,250)
