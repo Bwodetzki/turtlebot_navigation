@@ -17,6 +17,7 @@ def load_sim(bulletFile):
     global turtle
     if turtle is None:
         p.connect(p.GUI)
+        p.configureDebugVisualizer(flag=p.COV_ENABLE_KEYBOARD_SHORTCUTS, enable=0)
         load_env(bulletFile)
         p.setRealTimeSimulation(1)
         p.setGravity(0,0,-10)
