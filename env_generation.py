@@ -228,7 +228,7 @@ def main():
     while True:
         time.sleep(1./240.)
 
-        leftWheelVelocity, rightWheelVelocity, forward, turn = sim.keyboard_control(forward, turn)
+        leftWheelVelocity, rightWheelVelocity, forward, turn = sim.keyboard_control(forward, turn, speed=50)
         sim.step_sim(leftWheelVelocity, rightWheelVelocity)
 
 # Main code
