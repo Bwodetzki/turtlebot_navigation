@@ -16,7 +16,7 @@ import time
 # Functions
 def generate_polygon(center: Tuple[float, float], avg_radius: float,
                      irregularity: float, spikiness: float,
-                     num_vertices: int) -> List[Tuple[float, float]]:
+                     num_vertices: int, min_radius: float = 0) -> List[Tuple[float, float]]:
     """
     Start with the center of the polygon at center, then creates the
     polygon by sampling points on a circle around the center.
@@ -57,7 +57,7 @@ def generate_polygon(center: Tuple[float, float], avg_radius: float,
     points = []
     angle = random.uniform(0, 2 * math.pi)
     for i in range(num_vertices):
-        radius = clip(random.gauss(avg_radius, spikiness), 0, 2 * avg_radius)
+        radius = clip(random.gauss(avg_radius, spikiness), min_radius, 2 * avg_radius)
         point = np.array((center[0] + radius * math.cos(angle),
                  center[1] + radius * math.sin(angle)))
         points.append(point)
@@ -206,7 +206,8 @@ def main():
     irregularity = 1.0
     spikiness = 0.4
     num_vertices = 10
-    vertices = generate_polygon(center, avg_radius, irregularity, spikiness, num_vertices)
+    min_radius = 1
+    vertices = generate_polygon(center, avg_radius, irregularity, spikiness, num_vertices, min_radius)
 
     # This is our barrier
     plt.plot(vertices[:, 0], vertices[:, 1], 'b')
