@@ -140,6 +140,6 @@ if __name__=='__main__':
 
             # Generate and save lidar            
             measurements = get_lidar_measurements(path, angle, lidar_params)
-            save_lidar(measurements)
+            save_lidar(measurements, curr_env_idx=i, path_idx=j, env_parent_dir=env_parent_dir)
         sim.disconnect()
     plt.show
