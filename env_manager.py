@@ -14,6 +14,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import simulation as sim
 import time
+from collision_checker import is_inside_boundary, rectangle_col_checker
 
 env_parent_dir = Path("./envData").absolute().resolve() # parent directory all other environment directories are in
 env_dir_prefix = 'env' # prefix for environment directories
@@ -152,7 +153,7 @@ def visualize(vertices):
 
     # now you can save the image (img), or do whatever else you want with it.
 
-def generate_obstacles(center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=None, n=2, max_iters=1000):
+def generate_obstacles(vertices, center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=None, n=2, max_iters=1000):
     bounding_box = np.array([[0, 0], center_bounds])
     if seed is not None:
         np.random.seed(seed)
@@ -170,7 +171,7 @@ def generate_obstacles(center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=No
         angle = (2*np.random.rand() - 1)*np.pi
 
         # Check Conditions
-        condition = all(abs(center) >= edge_len_bounds[1]/2 + 1)
+        condition = all(abs(center) >= edge_len_bounds[1]/2 + 1) and is_inside_boundary(vertices, center, radius=0.05)
         if condition:
             # Store Samples
             centers[idx, :] = center
@@ -241,6 +242,39 @@ def load_obstacles(obstacles):
         angle = [0, 0, angle]
         sim.create_box(center, edge_length, angle)
 
+def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array((10, 10)), dist=1, seed=None, max_iters=1000):
+    if seed is not None:
+        np.random.seed(seed)
+
+    iters = 0
+    while iters < max_iters:
+        # Generate Sample
+        start = (2*np.random.rand(2)-1)*center_bounds
+
+        # Check Conditions for Start
+        rect_cols = [rectangle_col_checker(state, start, radius) for state in obstacles]
+        condition =  (not any(rect_cols)) and is_inside_boundary(vertices, start, radius)
+        if condition:
+                break
+        iters+=1
+    assert (iters != max_iters)  # Did not converge to the start position in the given # of iterations
+
+    iters = 0
+    while iters < max_iters:
+        # Generate Sample
+        goal = (2*np.random.rand(2)-1)*center_bounds
+
+        # Check Conditions for Goal
+        rect_cols = [rectangle_col_checker(state, goal, radius) for state in obstacles]
+        condition =  (not any(rect_cols)) and is_inside_boundary(vertices, goal, radius) and np.linalg.norm(start-goal)>dist
+        if condition:
+                break
+        iters+=1
+    assert (iters != max_iters)  # Did not converge to the goal position in the given # of iterations
+
+    return (start, goal)
+
+
 def main():
     generate_envs = True # after each iteration, prompts user to save or discard current env
     show_plot = True
@@ -248,6 +282,7 @@ def main():
     num_envs = 10
     barrier_seed = None
     obstacle_seed = None
+    sg_seed = None
 
     for _ in range(num_envs):
         center = (0,0)
@@ -262,7 +297,13 @@ def main():
         edge_len_bounds = [0.1, 2]
         num_obstacles = 10
         max_iters = 1000
-        obstacles = generate_obstacles(center_bounds, edge_len_bounds, obstacle_seed, num_obstacles, max_iters)
+        obstacles = generate_obstacles(barrier_vertices, center_bounds, edge_len_bounds, obstacle_seed, num_obstacles, max_iters)
+
+        radius = 0.75
+        center_bounds = np.array([10, 10])
+        min_dist_from_start_to_goal = 1
+
+        start, goal = generate_start_goal(barrier_vertices, obstacles, radius, center_bounds, min_dist_from_start_to_goal, sg_seed)
 
         if show_plot:
             ax = plt.subplot()
@@ -273,7 +314,13 @@ def main():
             # These are our obstacles
             for obstacle in obstacles:
                 plot_obstacle(obstacle, ax=ax)
+
+            # Start ang Goal
+            ax.plot(start[0], start[1], 'ro', label='start')
+            ax.plot(goal[0], goal[1], 'mo', label='goal')
+
             ax.set_aspect('equal')
+            plt.legend()
             plt.show()
 
         if run_sim:
