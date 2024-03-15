@@ -20,13 +20,14 @@ def connected():
         return False
     return True
 
-def create_sim():
+def create_sim(load_turtle=True):
     global turtle
     global physics_server_id
     if not connected():
         physics_server_id = p.connect(p.GUI)
         p.configureDebugVisualizer(flag=p.COV_ENABLE_KEYBOARD_SHORTCUTS, enable=0)
-        turtle = p.loadURDF("turtlebot.urdf",turtle_offset)
+        if load_turtle:
+            turtle = p.loadURDF("turtlebot.urdf",turtle_offset)
         plane = p.loadURDF("plane.urdf")
         p.setRealTimeSimulation(1)
         p.setGravity(0,0,-10)

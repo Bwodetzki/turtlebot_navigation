@@ -78,7 +78,7 @@ def save_path(path, angle, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent
         makedirs(str(env_dir))
     except:
         pass
-    file_name = f'sg_config{env_data_file_suffix}'  # Start Goal Configuration
+    file_name = f'path{env_data_file_suffix}'  # Start Goal Configuration
     path_file = env_dir / file_name
     with open(str(path_file), 'wb') as p_fp:
         pickle.dump(data, p_fp)
@@ -88,7 +88,26 @@ def save_path(path, angle, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent
 def load_path(path_file):
     with open(str(path_file), 'rb') as p_fp:
         data = pickle.load(p_fp)
-    return(data[0], data[1])  # Tuple of start and goal
+    return (data[0], data[1])  # Tuple of start and goal
+
+def save_lidar(measurements, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
+    env_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}' / f'path{path_idx}'
+    try:
+        makedirs(str(env_dir))
+    except:
+        pass
+    file_name = f'measurements{env_data_file_suffix}'  # Start Goal Configuration
+    measurement_file = env_dir / file_name
+    with open(str(measurement_file), 'wb') as m_fp:
+        pickle.dump(measurements, m_fp)
+    
+    return measurement_file
+
+def load_lidar(measurement_file):
+    with open(str(measurement_file), 'rb') as m_fp:
+        data = pickle.load(m_fp)
+    return data  # Tuple of start and goal
+
 
 def generate_polygon(center: Tuple[float, float], avg_radius: float,
                      irregularity: float, spikiness: float,
@@ -257,7 +276,7 @@ def plot_obstacle(obstacle, ax=None):
 
 def load_boundary(vertices):
     wallHeight = 1
-    precision = 0.05
+    precision = 0.1
     maxDim = np.max(abs(vertices))
     heightFieldDim = math.ceil(2*maxDim/precision)
     height_field = np.zeros((heightFieldDim, heightFieldDim))
