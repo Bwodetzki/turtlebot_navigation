@@ -21,6 +21,8 @@ env_dir_prefix = 'env' # prefix for environment directories
 env_data_file_prefix = 'env' # prefix for environment data files
 env_data_file_suffix = '.dat'
 
+
+
 # Functions
 def get_curr_env_idx():
     if env_parent_dir.exists():
@@ -39,6 +41,19 @@ def save_curr_env(boundary, obstacles):
     with open(str(curr_env_obstacles_file), 'wb') as obstacles_fp:
         pickle.dump(obstacles, obstacles_fp)
 
+def save_env(boundary, obstacles, env_idx, env_parent_dir=env_parent_dir):
+    curr_env_dir = env_parent_dir / f'{env_dir_prefix}{env_idx}'
+    try:
+        makedirs(str(curr_env_dir))
+    except:
+        pass
+    curr_env_boundary_file = curr_env_dir / f'{env_data_file_prefix}{env_idx}_boundary{env_data_file_suffix}'
+    curr_env_obstacles_file = curr_env_dir / f'{env_data_file_prefix}{env_idx}_obstacles{env_data_file_suffix}'
+    with open(str(curr_env_boundary_file), 'wb') as boundary_fp:
+        pickle.dump(boundary, boundary_fp)
+    with open(str(curr_env_obstacles_file), 'wb') as obstacles_fp:
+        pickle.dump(obstacles, obstacles_fp)
+
 def load_env(boundary_file, obstacles_file):
     with open(str(boundary_file), 'rb') as boundary_fp:
         boundary = pickle.load(boundary_fp)
@@ -46,6 +61,34 @@ def load_env(boundary_file, obstacles_file):
         obstacles = pickle.load(obstacles_fp)
     load_boundary(boundary)
     load_obstacles(obstacles)
+
+def save_start_goal(start, goal, angle, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
+    path = np.vstack((start, goal))
+    sg_file = save_path(path, angle, curr_env_idx, path_idx, env_parent_dir)
+    return sg_file
+
+def load_start_goal(sg_file):
+    path, angle = load_path(sg_file)
+    return(path[0], path[1], angle)  # Tuple of start and goal
+
+def save_path(path, angle, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
+    data = (path, angle)  # tuple, 1st entry:numpy array of path, second entry: start angle
+    env_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}' / f'path{path_idx}'
+    try:
+        makedirs(str(env_dir))
+    except:
+        pass
+    file_name = f'sg_config{env_data_file_suffix}'  # Start Goal Configuration
+    path_file = env_dir / file_name
+    with open(str(path_file), 'wb') as p_fp:
+        pickle.dump(data, p_fp)
+    
+    return path_file
+
+def load_path(path_file):
+    with open(str(path_file), 'rb') as p_fp:
+        data = pickle.load(p_fp)
+    return(data[0], data[1])  # Tuple of start and goal
 
 def generate_polygon(center: Tuple[float, float], avg_radius: float,
                      irregularity: float, spikiness: float,
@@ -272,7 +315,9 @@ def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array
         iters+=1
     assert (iters != max_iters)  # Did not converge to the goal position in the given # of iterations
 
-    return (start, goal)
+    angle = (2*np.random.rand() - 1)*np.pi
+
+    return (start, goal, angle)
 
 
 def main():
@@ -302,8 +347,10 @@ def main():
         radius = 0.75
         center_bounds = np.array([10, 10])
         min_dist_from_start_to_goal = 1
+        start, goal, angle = generate_start_goal(barrier_vertices, obstacles, radius, center_bounds, min_dist_from_start_to_goal, sg_seed)
 
-        start, goal = generate_start_goal(barrier_vertices, obstacles, radius, center_bounds, min_dist_from_start_to_goal, sg_seed)
+        file = save_start_goal(start, goal, angle)
+        load_start_goal(file)
 
         if show_plot:
             ax = plt.subplot()
@@ -340,6 +387,7 @@ def main():
         if generate_envs:
             if input("Save this environment y/(n)? ") in ['y', 'Y', 'yes', 'Yes']:
                 save_curr_env(barrier_vertices, obstacles)
+                save_start_goal(start, goal, angle, get_curr_env_idx()-1)
                 print('Environment saved')
             else:
                 print('Environment discarded')
