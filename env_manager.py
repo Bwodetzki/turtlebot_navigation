@@ -116,16 +116,16 @@ def random_angle_steps(steps: int, irregularity: float, seed: int = None) -> Lis
     angles = []
     lower = (2 * math.pi / steps) - irregularity
     upper = (2 * math.pi / steps) + irregularity
-    cumsum = 0
+    cum_sum = 0
     for i in range(steps):
         angle = np.random.uniform(lower, upper)
         angles.append(angle)
-        cumsum += angle
+        cum_sum += angle
 
     # normalize the steps so that point 0 and point n+1 are the same
-    cumsum /= (2 * math.pi)
+    cum_sum /= (2 * math.pi)
     for i in range(steps):
-        angles[i] /= cumsum
+        angles[i] /= cum_sum
     return angles
 
 def clip(value, lower, upper):
@@ -176,7 +176,7 @@ def generate_obstacles(center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=No
             centers[idx, :] = center
             edge_lengths[idx, :] = edge_length
             angles[idx] = angle
-            # Udpate Index
+            # Update Index
             idx+=1
             # Check if sol found
             if idx==n:
@@ -216,7 +216,7 @@ def load_boundary(vertices):
     precision = 0.05
     maxDim = np.max(abs(vertices))
     heightFieldDim = math.ceil(2*maxDim/precision)
-    heightfield = np.zeros((heightFieldDim, heightFieldDim))
+    height_field = np.zeros((heightFieldDim, heightFieldDim))
     for idx in range(-1, np.size(vertices, axis=0)-1):
         vertex1 = vertices[idx, :]
         vertex2 = vertices[idx+1, :]
@@ -228,9 +228,9 @@ def load_boundary(vertices):
             x, y = worldCoords/precision + np.array([heightFieldDim/2, heightFieldDim/2])
             x = clip(round(x), 0, heightFieldDim-1)
             y = clip(round(y), 0, heightFieldDim-1)
-            heightfield[y,x] = wallHeight
-    heightfield = heightfield.flatten()
-    boundary_shape = p.createCollisionShape(shapeType = p.GEOM_HEIGHTFIELD, meshScale=[precision, precision, 1], heightfieldData=heightfield, numHeightfieldRows=heightFieldDim, numHeightfieldColumns=heightFieldDim)
+            height_field[y,x] = wallHeight
+    height_field = height_field.flatten()
+    boundary_shape = p.createCollisionShape(shapeType = p.GEOM_HEIGHTFIELD, meshScale=[precision, precision, 1], heightfieldData=height_field, numHeightfieldRows=heightFieldDim, numHeightfieldColumns=heightFieldDim)
     boundary  = p.createMultiBody(0, boundary_shape)
     p.resetBasePositionAndOrientation(boundary,[0,0,0], [0,0,0,1])
 
