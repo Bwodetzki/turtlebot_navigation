@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import pybullet as p
 
@@ -5,6 +6,12 @@ physics_server_id = None
 
 turtle_offset = [0,0,0]
 turtle = None
+
+def disconnect():
+    global physics_server_id
+    if connected():
+        p.disconnect()
+        physics_server_id = None
 
 def connected():
     global physics_server_id
@@ -24,15 +31,6 @@ def create_sim():
         p.setRealTimeSimulation(1)
         p.setGravity(0,0,-10)
 
-def load_sim(bulletFile):
-    global physics_server_id
-    if not connected():
-        physics_server_id = p.connect(p.GUI)
-        p.configureDebugVisualizer(flag=p.COV_ENABLE_KEYBOARD_SHORTCUTS, enable=0)
-        load_env(bulletFile)
-        p.setRealTimeSimulation(1)
-        p.setGravity(0,0,-10)
-
 def create_box(position, dimensions, angles=[0, 0, 0], mass=0):
     quat = p.getQuaternionFromEuler(angles)
     obstacle = p.createCollisionShape(p.GEOM_BOX, halfExtents=[dim/2 for dim in dimensions])
@@ -44,9 +42,6 @@ def step_sim(leftWheelVelocity, rightWheelVelocity):
         p.setJointMotorControl2(turtle,1,p.VELOCITY_CONTROL,targetVelocity=rightWheelVelocity,force=1000)
     except Exception:
         return
-
-def load_env(bulletFile):
-    p.restoreState(fileName=bulletFile)
 
 def keyboard_control(forward, turn, speed=10, camStep=0.1, camAngleStep=1):
     try: # needed if simulation stops suddenly

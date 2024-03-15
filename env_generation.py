@@ -4,6 +4,9 @@ https://stackoverflow.com/questions/8997099/algorithm-to-generate-random-2d-poly
 '''
 
 import math
+import pickle
+from pathlib import Path
+from os import makedirs
 from typing import List, Tuple
 import pybullet as p
 from PIL import Image, ImageDraw
@@ -12,8 +15,37 @@ import matplotlib.pyplot as plt
 import simulation as sim
 import time
 
+env_parent_dir = Path("./envData").absolute().resolve() # parent directory all other environment directories are in
+env_dir_prefix = 'env' # prefix for environment directories
+env_data_file_prefix = 'env' # prefix for environment data files
+env_data_file_suffix = '.dat'
 
 # Functions
+def get_curr_env_idx():
+    if env_parent_dir.exists():
+        env_idxs = [int(env.stem.strip(env_dir_prefix)) for env in env_parent_dir.iterdir() if env.is_dir()]
+        return max(env_idxs) + 1
+    return 0
+
+def save_curr_env(boundary, obstacles):
+    curr_env_idx = get_curr_env_idx()
+    curr_env_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}'
+    makedirs(str(curr_env_dir))
+    curr_env_boundary_file = curr_env_dir / f'{env_data_file_prefix}{curr_env_idx}_boundary{env_data_file_suffix}'
+    curr_env_obstacles_file = curr_env_dir / f'{env_data_file_prefix}{curr_env_idx}_obstacles{env_data_file_suffix}'
+    with open(str(curr_env_boundary_file), 'wb') as boundary_fp:
+        pickle.dump(boundary, boundary_fp)
+    with open(str(curr_env_obstacles_file), 'wb') as obstacles_fp:
+        pickle.dump(obstacles, obstacles_fp)
+
+def load_env(boundary_file, obstacles_file):
+    with open(str(boundary_file), 'rb') as boundary_fp:
+        boundary = pickle.load(boundary_fp)
+    with open(str(obstacles_file), 'rb') as obstacles_fp:
+        obstacles = pickle.load(obstacles_fp)
+    load_boundary(boundary)
+    load_obstacles(obstacles)
+
 def generate_polygon(center: Tuple[float, float], avg_radius: float,
                      irregularity: float, spikiness: float,
                      num_vertices: int, min_radius: float = 0, seed: int = None) -> List[Tuple[float, float]]:
@@ -210,9 +242,10 @@ def load_obstacles(obstacles):
         sim.create_box(center, edge_length, angle)
 
 def main():
+    generate_envs = True # after each iteration, prompts user to save or discard current env
     show_plot = True
-    run_sim = True
-    num_envs = 3
+    run_sim = False
+    num_envs = 10
     barrier_seed = None
     obstacle_seed = None
 
@@ -243,19 +276,30 @@ def main():
             ax.set_aspect('equal')
             plt.show()
 
-        if run_sim:
+        if generate_envs:
+            user_response = input("Save this environment y/(n)? ")
+            save_env = user_response in ['y', 'Y', 'yes', 'Yes']
+
+        if run_sim or save_env:
             # Lets test this out:
             sim.create_sim()
             load_obstacles(obstacles)
             load_boundary(barrier_vertices)
 
-            forward=0
-            turn=0
-            while sim.connected(): # use sim.connected() instead of plt.isConnected so we don't need a server id
-                time.sleep(1./240.)
+            if save_env:
+                save_curr_env(barrier_vertices, obstacles)
+                print('Environment saved')
+            else:
+                print('Environment discarded')
+            if run_sim:
+                forward=0
+                turn=0
+                while sim.connected(): # use sim.connected() instead of plt.isConnected so we don't need a server id
+                    time.sleep(1./240.)
 
-                leftWheelVelocity, rightWheelVelocity, forward, turn = sim.keyboard_control(forward, turn, speed=50)
-                sim.step_sim(leftWheelVelocity, rightWheelVelocity)
+                    leftWheelVelocity, rightWheelVelocity, forward, turn = sim.keyboard_control(forward, turn, speed=50)
+                    sim.step_sim(leftWheelVelocity, rightWheelVelocity)
+            sim.disconnect()
 
 # Main code
 if __name__=='__main__':
