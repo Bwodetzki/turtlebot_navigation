@@ -170,7 +170,7 @@ def generate_obstacles(center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=No
         angle = (2*np.random.rand() - 1)*np.pi
 
         # Check Conditions
-        condition = all(abs(center) >= edge_len_bounds[1]/2)
+        condition = all(abs(center) >= edge_len_bounds[1]/2 + 1)
         if condition:
             # Store Samples
             centers[idx, :] = center
