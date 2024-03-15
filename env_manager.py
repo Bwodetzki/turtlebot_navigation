@@ -276,30 +276,26 @@ def main():
             ax.set_aspect('equal')
             plt.show()
 
-        if generate_envs:
-            user_response = input("Save this environment y/(n)? ")
-            save_env = user_response in ['y', 'Y', 'yes', 'Yes']
-
-        if run_sim or save_env:
+        if run_sim:
             # Lets test this out:
             sim.create_sim()
             load_obstacles(obstacles)
             load_boundary(barrier_vertices)
 
-            if save_env:
+            forward=0
+            turn=0
+            while sim.connected(): # use sim.connected() instead of plt.isConnected so we don't need a server id
+                time.sleep(1./240.)
+                leftWheelVelocity, rightWheelVelocity, forward, turn = sim.keyboard_control(forward, turn, speed=50)
+                sim.step_sim(leftWheelVelocity, rightWheelVelocity)
+            sim.disconnect()
+
+        if generate_envs:
+            if input("Save this environment y/(n)? ") in ['y', 'Y', 'yes', 'Yes']:
                 save_curr_env(barrier_vertices, obstacles)
                 print('Environment saved')
             else:
                 print('Environment discarded')
-            if run_sim:
-                forward=0
-                turn=0
-                while sim.connected(): # use sim.connected() instead of plt.isConnected so we don't need a server id
-                    time.sleep(1./240.)
-
-                    leftWheelVelocity, rightWheelVelocity, forward, turn = sim.keyboard_control(forward, turn, speed=50)
-                    sim.step_sim(leftWheelVelocity, rightWheelVelocity)
-            sim.disconnect()
 
 # Main code
 if __name__=='__main__':
