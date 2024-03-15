@@ -1,4 +1,4 @@
-import pickle
+import time
 import numpy as np
 import pybullet as p
 
@@ -133,3 +133,53 @@ def keyboard_control(forward, turn, speed=10, camStep=0.1, camAngleStep=1):
         physics_server_id = None
     finally:
         return (leftWheelVelocity, rightWheelVelocity, forward, turn)
+
+def getTurtleInfo():
+    '''
+    Returned value in the form of (turtle_position, turtle_orientation_quaternion)
+    '''
+    return p.getBasePositionAndOrientation(turtle)
+
+def localLidar(botPos: tuple[float, float, float], botAngle: float, lidarDist: float = 1, lidarAngle: float = 2*np.pi, numMeasurements: int = 360):
+    sensor_height = 1 # taller than the bot so rays won't intersect with its body
+    bot_radius = .17 # just smaller than the bot radius to stop rays from starting inside a very close obstacle
+    relStartAngle = -lidarAngle/2 # relative start angle to bot heading angle
+    worldStartAngle = botAngle + relStartAngle
+    if numMeasurements > 1:
+        angleStep = lidarAngle/(numMeasurements-1)
+    else:
+        angleStep = 0
+    measurementAngles = [worldStartAngle + angleIdx*(angleStep) for angleIdx in range(numMeasurements)]
+    rayStartPoints = [np.array(botPos) + bot_radius*np.array([np.cos(angle), np.sin(angle), sensor_height]) for angle in measurementAngles]
+    rayEndPoints = [startPoint + lidarDist*np.array([np.cos(angle), np.sin(angle), 0]) for startPoint, angle in zip(rayStartPoints, measurementAngles)]
+    rayInfoArray = p.rayTestBatch(rayStartPoints, rayEndPoints)
+    measurements = [hit_fraction for _, _, hit_fraction, _, _ in rayInfoArray]
+    return measurements
+
+def main():
+    create_sim()
+    create_box([3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
+    create_box([-3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
+    create_box([3,-3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
+    create_box([-3,-3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
+    forward=0
+    turn=0
+    startTime = time.time()
+    samplePeriod = 1 # seconds
+    while connected(): # use sim.connected() instead of plt.isConnected so we don't need a server id
+        time.sleep(1./240.)
+        leftWheelVelocity, rightWheelVelocity, forward, turn = keyboard_control(forward, turn, speed=30)
+        step_sim(leftWheelVelocity, rightWheelVelocity)
+        
+        currTime = time.time()
+        if currTime > startTime + samplePeriod:
+            turtle_pos, turtle_orientation = getTurtleInfo()
+            turtle_orientation = p.getEulerFromQuaternion(turtle_orientation)[-1]
+            lidarResults = localLidar(turtle_pos, turtle_orientation, lidarAngle=np.pi, numMeasurements=3)
+            print(f'{turtle_orientation = }')
+            print(f'{lidarResults = }')
+            startTime = currTime
+    disconnect()
+
+if __name__ == '__main__':
+    main()
