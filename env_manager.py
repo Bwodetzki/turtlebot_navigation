@@ -20,6 +20,9 @@ env_parent_dir = Path("./envData").absolute().resolve() # parent directory all o
 env_dir_prefix = 'env' # prefix for environment directories
 env_data_file_prefix = 'env' # prefix for environment data files
 env_data_file_suffix = '.dat'
+path_dir_prefix = 'path' # prefix for path directories
+path_data_file_prefix = 'path' # prefix for path data files
+path_data_file_suffix = '.dat'
 
 # Functions
 def get_curr_env_idx():
@@ -71,15 +74,15 @@ def load_start_goal(sg_file):
 
 def save_path(path, angle, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
     data = (path, angle)  # tuple, 1st entry:numpy array of path, second entry: start angle
-    env_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}' / f'path{path_idx}'
+    path_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}' / f'{path_dir_prefix}{path_idx}'
     try:
-        makedirs(str(env_dir))
+        makedirs(str(path_dir))
     except:
         pass
-    file_name = f'path{env_data_file_suffix}'  # Start Goal Configuration
-    path_file = env_dir / file_name
-    with open(str(path_file), 'wb') as p_fp:
-        pickle.dump(data, p_fp)
+    file_name = f'{path_data_file_prefix}{path_data_file_suffix}'  # Start Goal Configuration
+    path_file = path_dir / file_name
+    with open(str(path_file), 'wb') as path_fp:
+        pickle.dump(data, path_fp)
     
     return path_file
 
@@ -89,15 +92,15 @@ def load_path(path_file):
     return (data[0], data[1])  # Tuple of start and goal
 
 def save_lidar(measurements, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
-    env_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}' / f'path{path_idx}'
+    path_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}' / f'{path_dir_prefix}{path_idx}'
     try:
-        makedirs(str(env_dir))
+        makedirs(str(path_dir))
     except:
         pass
-    file_name = f'measurements{env_data_file_suffix}'  # Start Goal Configuration
-    measurement_file = env_dir / file_name
-    with open(str(measurement_file), 'wb') as m_fp:
-        pickle.dump(measurements, m_fp)
+    file_name = f'measurements{path_data_file_suffix}'  # Start Goal Configuration
+    measurement_file = path_dir / file_name
+    with open(str(measurement_file), 'wb') as measurements_fp:
+        pickle.dump(measurements, measurements_fp)
     
     return measurement_file
 
@@ -107,7 +110,7 @@ def load_lidar(measurement_file):
     return data  # Tuple of start and goal
 
 
-def generate_polygon(center: Tuple[float, float], avg_radius: float,
+def generate_boundary(center: Tuple[float, float], avg_radius: float,
                      irregularity: float, spikiness: float,
                      num_vertices: int, min_radius: float = 0, seed: int = None) -> List[Tuple[float, float]]:
     """
@@ -146,13 +149,13 @@ def generate_polygon(center: Tuple[float, float], avg_radius: float,
 
     irregularity *= 2 * math.pi / num_vertices
     spikiness *= avg_radius
-    angle_steps = random_angle_steps(num_vertices, irregularity, seed)
+    angle_steps = _random_angle_steps(num_vertices, irregularity, seed)
 
     # now generate the points
     points = []
     angle = np.random.uniform(0, 2 * math.pi)
     for i in range(num_vertices):
-        radius = clip(np.random.normal(avg_radius, spikiness), min_radius, 2 * avg_radius)
+        radius = _clip(np.random.normal(avg_radius, spikiness), min_radius, 2 * avg_radius)
         point = np.array((center[0] + radius * math.cos(angle),
                  center[1] + radius * math.sin(angle)))
         points.append(point)
@@ -160,7 +163,7 @@ def generate_polygon(center: Tuple[float, float], avg_radius: float,
 
     return np.array(points)
 
-def random_angle_steps(steps: int, irregularity: float, seed: int = None) -> List[float]:
+def _random_angle_steps(steps: int, irregularity: float, seed: int = None) -> List[float]:
     """Generates the division of a circumference in random angles.
 
     Args:
@@ -189,14 +192,14 @@ def random_angle_steps(steps: int, irregularity: float, seed: int = None) -> Lis
         angles[i] /= cum_sum
     return angles
 
-def clip(value, lower, upper):
+def _clip(value, lower, upper):
     """
     Given an interval, values outside the interval are clipped to the interval
     edges.
     """
     return min(upper, max(value, lower))
 
-def visualize(vertices):
+def _visualize(vertices):
     black = (0, 0, 0)
     white = (255, 255, 255)
     img = Image.new('RGB', (500, 500), white)
@@ -213,8 +216,8 @@ def visualize(vertices):
 
     # now you can save the image (img), or do whatever else you want with it.
 
-def generate_obstacles(vertices, center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=None, n=2, max_iters=1000):
-    bounding_box = np.array([[0, 0], center_bounds])
+def generate_obstacles(vertices, center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=None, n=2, max_attempts=1000):
+    bounding_box = np.array(center_bounds)
     if seed is not None:
         np.random.seed(seed)
     
@@ -222,29 +225,30 @@ def generate_obstacles(vertices, center_bounds=[10, 10], edge_len_bounds=[0.1, 2
     edge_lengths = np.zeros((n, 2))
     angles = np.zeros((n))
 
-    iters = 0
-    idx=0
-    while iters < max_iters:
+    attempts = 0
+    num_done=0
+    while attempts < max_attempts:
         # Generate Samples
-        center = (2*np.random.rand(2)-1)*bounding_box[1, :]
+        center = (2*np.random.rand(2)-1)*bounding_box
         edge_length = np.random.rand(2)*(edge_len_bounds[1]-edge_len_bounds[0]) + edge_len_bounds[0]
         angle = (2*np.random.rand() - 1)*np.pi
 
         # Check Conditions
-        condition = all(abs(center) >= edge_len_bounds[1]/2 + 1) and is_inside_boundary(vertices, center, radius=0.05)
-        if condition:
+        success = all(abs(center) >= edge_len_bounds[1]/2 + 1) and is_inside_boundary(vertices, center, radius=0.05)
+        if success:
             # Store Samples
-            centers[idx, :] = center
-            edge_lengths[idx, :] = edge_length
-            angles[idx] = angle
-            # Update Index
-            idx+=1
-            # Check if sol found
-            if idx==n:
+            centers[num_done, :] = center
+            edge_lengths[num_done, :] = edge_length
+            angles[num_done] = angle
+
+            num_done+=1
+
+            if num_done==n:
                 break
-        iters+=1
+        attempts+=1
     
-    assert (iters != max_iters)  # Did not converge in the given # of iterations
+    if attempts == max_attempts:
+        raise Exception('Failed to generate obstacles')
 
     return list(zip(centers, edge_lengths, angles))
 
@@ -253,9 +257,6 @@ def plot_obstacle(obstacle, ax=None):
     x_len = edge_lengths[0]
     y_len = edge_lengths[1]
 
-    x_cen = center[0]
-    y_cen = center[1]
-    
     obs = 0.5 * np.array([[-x_len, -y_len],
                     [-x_len, y_len],
                     [x_len, y_len],
@@ -263,7 +264,7 @@ def plot_obstacle(obstacle, ax=None):
     
     rot_mat = np.array([[np.cos(angle), -np.sin(angle)],
                         [np.sin(angle), np.cos(angle)]])
-    obs = (rot_mat@obs.T).T + np.array([x_cen, y_cen])
+    obs = (rot_mat@obs.T).T + np.array(center)
         
     if ax is None:
         plt.plot(obs[:, 0], obs[:, 1], 'g')
@@ -275,8 +276,8 @@ def plot_obstacle(obstacle, ax=None):
 def load_boundary(vertices):
     wallHeight = 1
     precision = 0.1
-    maxDim = np.max(abs(vertices))
-    heightFieldDim = math.ceil(2*maxDim/precision)
+    maxBoundaryDim = np.max(abs(vertices))
+    heightFieldDim = math.ceil(2*maxBoundaryDim/precision)
     height_field = np.zeros((heightFieldDim, heightFieldDim))
     for idx in range(-1, np.size(vertices, axis=0)-1):
         vertex1 = vertices[idx, :]
@@ -287,8 +288,8 @@ def load_boundary(vertices):
         for step in range(math.ceil(dist/precision)):
             worldCoords = vertex1 + step*precision*direction
             x, y = worldCoords/precision + np.array([heightFieldDim/2, heightFieldDim/2])
-            x = clip(round(x), 0, heightFieldDim-1)
-            y = clip(round(y), 0, heightFieldDim-1)
+            x = _clip(round(x), 0, heightFieldDim-1)
+            y = _clip(round(y), 0, heightFieldDim-1)
             height_field[y,x] = wallHeight
     height_field = height_field.flatten()
     boundary_shape = p.createCollisionShape(shapeType = p.GEOM_HEIGHTFIELD, meshScale=[precision, precision, 1], heightfieldData=height_field, numHeightfieldRows=heightFieldDim, numHeightfieldColumns=heightFieldDim)
@@ -302,47 +303,50 @@ def load_obstacles(obstacles):
         angle = [0, 0, angle]
         sim.create_box(center, edge_length, angle)
 
-def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array((10, 10)), dist=1, seed=None, max_iters=1000):
+def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array((10, 10)), dist=1, seed=None, max_attempts=1000):
     if seed is not None:
         np.random.seed(seed)
 
-    iters = 0
-    while iters < max_iters:
+    attempts = 0
+    while attempts < max_attempts:
         # Generate Sample
         start = (2*np.random.rand(2)-1)*center_bounds
 
         # Check Conditions for Start
-        rect_cols = [rectangle_col_checker(state, start, radius) for state in obstacles]
-        condition =  (not any(rect_cols)) and is_inside_boundary(vertices, start, radius)
-        if condition:
+        obstacle_collisions = [rectangle_col_checker(obstacle, start, radius) for obstacle in obstacles]
+        success =  (not any(obstacle_collisions)) and is_inside_boundary(vertices, start, radius)
+        if success:
             break
-        iters+=1
-    assert (iters != max_iters)  # Did not converge to the start position in the given # of iterations
+        attempts+=1
 
-    iters = 0
-    while iters < max_iters:
+    if attempts == max_attempts:
+        raise Exception('Failed to generate start point')
+
+    attempts = 0
+    while attempts < max_attempts:
         # Generate Sample
         goal = (2*np.random.rand(2)-1)*center_bounds
 
         # Check Conditions for Goal
-        rect_cols = [rectangle_col_checker(state, goal, radius) for state in obstacles]
-        condition =  (not any(rect_cols)) and is_inside_boundary(vertices, goal, radius) and np.linalg.norm(start-goal)>dist
-        if condition:
+        obstacle_collisions = [rectangle_col_checker(state, goal, radius) for state in obstacles]
+        success =  (not any(obstacle_collisions)) and is_inside_boundary(vertices, goal, radius) and np.linalg.norm(start-goal)>dist
+        if success:
             break
-        iters+=1
-    assert (iters != max_iters)  # Did not converge to the goal position in the given # of iterations
+        attempts+=1
 
-    angle = (2*np.random.rand() - 1)*np.pi
+    if attempts == max_attempts:
+        raise Exception('Failed to generate end point')
 
-    return (start, goal, angle)
+    start_angle = (2*np.random.rand() - 1)*np.pi
 
+    return (start, goal, start_angle)
 
 def main():
     generate_envs = True # after each iteration, prompts user to save or discard current env
     show_plot = True
     run_sim = False
     num_envs = 10
-    barrier_seed = None
+    boundary_seed = None
     obstacle_seed = None
     sg_seed = None
 
@@ -353,27 +357,27 @@ def main():
         spikiness = 0.4
         num_vertices = 10
         min_radius = 1
-        barrier_vertices = generate_polygon(center, avg_radius, irregularity, spikiness, num_vertices, min_radius, barrier_seed)
+        boundary_vertices = generate_boundary(center, avg_radius, irregularity, spikiness, num_vertices, min_radius, boundary_seed)
 
         center_bounds = [10,10]
         edge_len_bounds = [0.1, 2]
         num_obstacles = 10
         max_iters = 1000
-        obstacles = generate_obstacles(barrier_vertices, center_bounds, edge_len_bounds, obstacle_seed, num_obstacles, max_iters)
+        obstacles = generate_obstacles(boundary_vertices, center_bounds, edge_len_bounds, obstacle_seed, num_obstacles, max_iters)
 
         radius = 0.75
         center_bounds = np.array([10, 10])
         min_dist_from_start_to_goal = 1
-        start, goal, angle = generate_start_goal(barrier_vertices, obstacles, radius, center_bounds, min_dist_from_start_to_goal, sg_seed)
+        start, goal, angle = generate_start_goal(boundary_vertices, obstacles, radius, center_bounds, min_dist_from_start_to_goal, sg_seed)
 
         file = save_start_goal(start, goal, angle)
         load_start_goal(file)
 
         if show_plot:
             ax = plt.subplot()
-            # This is our barrier
-            ax.plot(barrier_vertices[:, 0], barrier_vertices[:, 1], 'b')
-            ax.plot([barrier_vertices[0, 0], barrier_vertices[-1, 0]], [barrier_vertices[0, 1], barrier_vertices[-1, 1]], 'b')
+            # This is our boundary
+            ax.plot(boundary_vertices[:, 0], boundary_vertices[:, 1], 'b')
+            ax.plot([boundary_vertices[0, 0], boundary_vertices[-1, 0]], [boundary_vertices[0, 1], boundary_vertices[-1, 1]], 'b')
 
             # These are our obstacles
             for obstacle in obstacles:
@@ -391,7 +395,7 @@ def main():
             # Lets test this out:
             sim.create_sim()
             load_obstacles(obstacles)
-            load_boundary(barrier_vertices)
+            load_boundary(boundary_vertices)
 
             forward=0
             turn=0
@@ -403,7 +407,7 @@ def main():
 
         if generate_envs:
             if input("Save this environment y/(n)? ") in ['y', 'Y', 'yes', 'Yes']:
-                save_curr_env(barrier_vertices, obstacles)
+                save_curr_env(boundary_vertices, obstacles)
                 save_start_goal(start, goal, angle, get_curr_env_idx()-1)
                 print('Environment saved')
             else:
