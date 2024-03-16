@@ -76,11 +76,11 @@ class RRT():
         """
 
         self.nodeList = [self.start]
-
-        # Check if its a direct path
         break_flag=False
+        counter = 0  # Counts how many iters have passed since a solution has been found, breaks after 5!!
 
         for i in range(self.maxIter):
+            print(i)
             rnd = self.generatesample()
             nind = self.GetNearestListIndex(self.nodeList, rnd)
 
@@ -90,9 +90,15 @@ class RRT():
                     rnd = self.end
                     if not animation:
                         break_flag=True
+                else:
+                    rnd_valid, rnd_cost = self.steerTo(rnd, self.nodeList[nind])
             else:
                 rnd_valid, rnd_cost = self.steerTo(rnd, self.nodeList[nind])
 
+            if self.goalfound == True:
+                    counter+=1
+                    if counter>=5:
+                        break_flag=True
 
             if (rnd_valid):
                 newNode = copy.deepcopy(rnd)
@@ -119,8 +125,10 @@ class RRT():
                     self.rewire(newNode, newNodeIndex, nearinds) # you'll implement this method
 
                 if self.is_near_goal(newNode):
-                    self.solutionSet.add(newNodeIndex)
-                    self.goalfound = True
+                    is_valid_sol, cost = self.steerTo(self.end, newNode)
+                    if is_valid_sol or cost==None:
+                        self.solutionSet.add(newNodeIndex)
+                        self.goalfound = True
 
 
                 if animation:
@@ -475,7 +483,7 @@ def main():
     args = parser.parse_args()
 
     show_animation = not args.blind and not args.fast
-    show_animation = False
+    # show_animation = False
 
     print("Starting planning algorithm '%s' with '%s' robot geometry"%(args.alg, args.geom))
     starttime = time.time()

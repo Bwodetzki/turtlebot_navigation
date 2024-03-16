@@ -60,7 +60,7 @@ def generate_env(by_params, obs_params, plot=False):
 
     return (barrier_vertices, obstacles)
 
-def generate_paths(barrier_vertices, obstacles, sg_params, RRTs_params, plot=False):
+def generate_paths(barrier_vertices, obstacles, sg_params, RRTs_params, plot=False, bad_path=False):
     start, goal, angle = generate_start_goal(barrier_vertices, 
                                       obstacles, 
                                       sg_params['radius'], 
@@ -68,11 +68,14 @@ def generate_paths(barrier_vertices, obstacles, sg_params, RRTs_params, plot=Fal
                                       sg_params['dist'], 
                                       sg_params['sg_seed'])
     path = rrt_star(barrier_vertices, obstacles, start, goal, RRTs_params)
-    path.reverse()
-    path = np.array(path)
     if path is None:
-        # print('bad')
-        path = generate_paths(barrier_vertices, obstacles, sg_params, RRTs_params, plot=False)  # or something like that
+        print('bad')
+        path = generate_paths(barrier_vertices, obstacles, sg_params, RRTs_params, bad_path=True)  # or something like that
+    else:
+        if bad_path:
+            return path
+        path.reverse()
+        path = np.array(path)
 
     if plot:
         try:
@@ -127,7 +130,7 @@ if __name__=='__main__':
         'numMeasurements' : 360
     }
 
-    num_envs = 5
+    num_envs = 1
     num_paths = 2
     env_parent_dir = Path("./envData").absolute().resolve() 
     plot_env = True
