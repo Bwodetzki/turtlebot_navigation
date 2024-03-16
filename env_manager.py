@@ -234,7 +234,7 @@ def generate_obstacles(vertices, center_bounds=[10, 10], edge_len_bounds=[0.1, 2
         angle = (2*np.random.rand() - 1)*np.pi
 
         # Check Conditions
-        success = all(abs(center) >= edge_len_bounds[1]/2 + 1) and is_inside_boundary(vertices, center, radius=0.05)
+        success = all(abs(center) >= edge_length[1]/2 + 1) and is_inside_boundary(vertices, center, radius=0.05)
         if success:
             # Store Samples
             centers[num_done, :] = center
