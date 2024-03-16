@@ -2,6 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
 import simulation as sim
+from rrt import rrt_star
 from env_manager import generate_obstacles, generate_polygon, generate_start_goal, plot_obstacle, save_env, save_path, save_lidar, load_obstacles, load_boundary
 '''
 Aim is to generate a set # of environments (obstacles, boundary, start position (and orientation), and goal position)
@@ -66,13 +67,16 @@ def generate_paths(barrier_vertices, obstacles, sg_params, RRTs_params, plot=Fal
                                       sg_params['center_bounds'], 
                                       sg_params['dist'], 
                                       sg_params['sg_seed'])
-    # path = rrt_star(start, goal, barrier_vertices, obstacles, RRTs_params)
-    # if path is none:
-    #   path = generate_paths(...)  # or something like that
-    path = np.vstack((start, goal))
+    path = rrt_star(barrier_vertices, obstacles, start, goal, RRTs_params)
+    path.reverse()
+    path = np.array(path)
+    if path is None:
+        # print('bad')
+        path = generate_paths(barrier_vertices, obstacles, sg_params, RRTs_params, plot=False)  # or something like that
 
     if plot:
         try:
+            # print("here")
             ax = plt.gca()
         except:
             ax = plt.subplots()
@@ -80,6 +84,7 @@ def generate_paths(barrier_vertices, obstacles, sg_params, RRTs_params, plot=Fal
         # Start ang Goal
         ax.plot(start[0], start[1], 'ro', label='start')
         ax.plot(goal[0], goal[1], 'mo', label='goal')
+        ax.plot(path[:, 0], path[:, 1])
 
     return path, angle
 
@@ -97,7 +102,7 @@ if __name__=='__main__':
     }
 
     obstacle_params = {
-        'center_bounds' : [env_size, env_size],
+        'center_bounds' : [-env_size, env_size],
         'edge_len_bounds' : [0.1, 2],
         'num_obstacles' : 10,
         'obstacle_seed' : None
@@ -105,13 +110,15 @@ if __name__=='__main__':
 
     start_goal_params = {
         "radius" : 0.75,
-        "center_bounds" : np.array([env_size, env_size]),
+        "center_bounds" : np.array([-env_size, env_size]),
         "dist" : 1,
         'sg_seed' : None
     }
 
     RRTs_params = {
-        'n' : np.nan
+        'sample_bounds' : np.array((-env_size, env_size)),
+        'turtle_radius' : 0.5,
+        'max_iters' : 30
     }
 
     lidar_params = {
@@ -141,5 +148,5 @@ if __name__=='__main__':
             # Generate and save lidar            
             measurements = get_lidar_measurements(path, angle, lidar_params)
             save_lidar(measurements, curr_env_idx=i, path_idx=j, env_parent_dir=env_parent_dir)
+            plt.show()
         sim.disconnect()
-    plt.show
