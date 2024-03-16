@@ -20,17 +20,30 @@ def connected():
         return False
     return True
 
-def create_sim(load_turtle=True):
+def create_sim(gui=True, load_turtle=True):
+    """Create and connect to a physics server, optionally with a GUI visualizer
+
+    Args:
+        gui (bool, optional): Loads the simulation with the debugging GUI. Defaults to True.
+        load_turtle (bool, optional): Loads the simulation with the turtle. Defaults to True.
+    """
     global turtle
     global physics_server_id
     if not connected():
-        physics_server_id = p.connect(p.GUI)
+        if gui:
+            physics_server_id = p.connect(p.GUI)
+        else:
+            physics_server_id = p.connect(p.DIRECT)
         p.configureDebugVisualizer(flag=p.COV_ENABLE_KEYBOARD_SHORTCUTS, enable=0)
         if load_turtle:
             turtle = p.loadURDF("turtlebot.urdf",turtle_offset)
         plane = p.loadURDF("plane.urdf")
         p.setRealTimeSimulation(1)
         p.setGravity(0,0,-10)
+
+def clear_sim():
+    p.resetSimulation()
+    turtle = None
 
 def create_box(position, dimensions, angles=[0, 0, 0], mass=0):
     quat = p.getQuaternionFromEuler(angles)

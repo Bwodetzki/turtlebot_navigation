@@ -20,7 +20,7 @@ def get_lidar_measurements(path, angle, lidar_params):
 
     for i in range(1, len(path)):
         vector = path[i] - path[i-1]
-        angle = np.arctan2(vector[1], vector[0])  # Angle is reletive to previous path points
+        angle = np.arctan2(vector[1], vector[0])  # Angle is relative to previous path points
         hit_fraction = sim.localLidar(path[i], 
                               angle,
                               lidar_params['lidarDist'],
@@ -127,26 +127,28 @@ if __name__=='__main__':
         'numMeasurements' : 360
     }
 
-    num_envs = 1
+    num_envs = 5
     num_paths = 2
     env_parent_dir = Path("./envData").absolute().resolve() 
     plot_env = True
     plot_path = True
 
-    for i in range(num_envs):
+    for env_idx in range(num_envs):
         barrier_vertices, obstacles = generate_env(boundary_params, obstacle_params, plot_env)
-        save_env(barrier_vertices, obstacles, env_idx=i, env_parent_dir=env_parent_dir)  # NOTE: This overwrites other envs
+        save_env(barrier_vertices, obstacles, env_idx=env_idx, env_parent_dir=env_parent_dir)  # NOTE: This overwrites other envs
         # Connect to physics server (for lidar)
-        sim.create_sim(load_turtle=False)
+        sim.create_sim(gui=False, load_turtle=False)
         load_boundary(barrier_vertices)
         load_obstacles(obstacles)
 
-        for j in range(num_paths):
+        for path_idx in range(num_paths):
             path, angle = generate_paths(barrier_vertices, obstacles, start_goal_params, RRTs_params, plot_path)
-            save_path(path, angle, curr_env_idx=i, path_idx=j, env_parent_dir=env_parent_dir)
+            save_path(path, angle, curr_env_idx=env_idx, path_idx=path_idx, env_parent_dir=env_parent_dir)
 
             # Generate and save lidar            
             measurements = get_lidar_measurements(path, angle, lidar_params)
-            save_lidar(measurements, curr_env_idx=i, path_idx=j, env_parent_dir=env_parent_dir)
-            plt.show()
-        sim.disconnect()
+            save_lidar(measurements, curr_env_idx=env_idx, path_idx=path_idx, env_parent_dir=env_parent_dir)
+        sim.clear_sim()
+    sim.disconnect()
+    if plot_env or plot_path:
+        plt.show()
