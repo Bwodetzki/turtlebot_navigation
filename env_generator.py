@@ -106,7 +106,7 @@ if __name__=='__main__':
     }
 
     obstacle_params = {
-        'center_bounds' : [-env_size, env_size],
+        'center_bounds' : [env_size*2, env_size*2],
         'edge_len_bounds' : [0.1, 2],
         'num_obstacles' : 15,
         'obstacle_seed' : None
@@ -114,7 +114,7 @@ if __name__=='__main__':
 
     start_goal_params = {
         "radius" : 0.75,
-        "center_bounds" : np.array([-env_size, env_size]),
+        "center_bounds" : np.array([env_size*2, env_size*2]),
         "dist" : 1,
         'sg_seed' : None
     }
@@ -122,7 +122,8 @@ if __name__=='__main__':
     RRTs_params = {
         'sample_bounds' : np.array((-env_size, env_size)),
         'turtle_radius' : 0.5,
-        'max_iters' : 30
+        'max_iters' : 30,
+        'max_replan' : 5
     }
 
     lidar_params = {

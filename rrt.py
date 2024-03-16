@@ -41,7 +41,7 @@ class RRT():
     Class for RRT Planning
     """
 
-    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50):
+    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5):
         """
         Sets algorithm parameters
 
@@ -59,6 +59,7 @@ class RRT():
         self.turtle_radius = turtle_radius
         self.alg = alg
         self.dof = dof
+        self.maxReplan = maxReplan
 
         self.expandDis = expandDis
         self.goalSampleRate = goalSampleRate
@@ -84,7 +85,7 @@ class RRT():
             rnd = self.generatesample()
             nind = self.GetNearestListIndex(self.nodeList, rnd)
 
-            if i==0 and not animation:
+            if i==0:
                 rnd_valid, rnd_cost = self.steerTo(self.end, self.start)
                 if rnd_valid:
                     return [self.end.state, self.start.state]
@@ -95,7 +96,7 @@ class RRT():
 
             if self.goalfound == True:
                     counter+=1
-                    if counter>=5:
+                    if counter>=self.maxReplan:
                         break_flag=True
 
             if (rnd_valid):
@@ -467,28 +468,15 @@ def rrt_star(boundary, obstacles, start, goal, RRTs_params):
               turtle_radius=RRTs_params['turtle_radius'], 
               alg='rrtstar', 
               dof=2, 
-              maxIter=RRTs_params['max_iters'])
+              maxIter=RRTs_params['max_iters'],
+              maxReplan=RRTs_params['max_replan'])
     path = rrt.planning(animation=False)
     return path
     
 
 
 def main():
-    parser = argparse.ArgumentParser(description='CS 593-ROB - Assignment 1')
-    parser.add_argument('-g', '--geom', default='circle', choices=['point', 'circle', 'rectangle'], \
-        help='the geometry of the robot. Choose from "point" (Question 1), "circle" (Question 2), or "rectangle" (Question 3). default: "point"')
-    parser.add_argument('--alg', default='rrtstar', choices=['rrt', 'rrtstar'], \
-        help='which path-finding algorithm to use. default: "rrt"')
-    parser.add_argument('--iter', default=50, type=int, help='number of iterations to run')
-    parser.add_argument('--blind', action='store_true', help='set to disable all graphs. Useful for running in a headless session')
-    parser.add_argument('--fast', action='store_true', help='set to disable live animation. (the final results will still be shown in a graph). Useful for doing timing analysis')
-
-    args = parser.parse_args()
-
-    show_animation = not args.blind and not args.fast
-    # show_animation = False
-
-    print("Starting planning algorithm '%s' with '%s' robot geometry"%(args.alg, args.geom))
+    print("Starting planning algorithm '%s' with '%s' robot geometry"%('rrtstar', 'circle'))
     starttime = time.time()
 
     dof=2
@@ -502,11 +490,11 @@ def main():
     spikiness = 0.4
     num_vertices = 10
     min_radius = 1
-    barrier_vertices = em.generate_polygon(center, avg_radius, irregularity, spikiness, num_vertices, min_radius, barrier_seed)
+    barrier_vertices = em.generate_boundary(center, avg_radius, irregularity, spikiness, num_vertices, min_radius, barrier_seed)
 
     center_bounds = [20,20]
     edge_len_bounds = [0.1, 2]
-    num_obstacles = 40
+    num_obstacles = 10
     max_iters = 1000
     obstacles = em.generate_obstacles(barrier_vertices, center_bounds, edge_len_bounds, obstacle_seed, num_obstacles, max_iters)
 
@@ -515,7 +503,13 @@ def main():
     min_dist_from_start_to_goal = 1
     start, goal, angle = em.generate_start_goal(barrier_vertices, obstacles, radius, center_bounds, min_dist_from_start_to_goal, sg_seed)
 
-    rrt = RRT(start=start, goal=goal, boundary=barrier_vertices, obstacles=obstacles, sampleArea=center_bounds, turtle_radius=0.1, alg=args.alg, dof=dof, maxIter=args.iter)
+    turtle_radius = 0.5
+    maxIter = 30
+    maxReplan = 20
+
+    show_animation = True
+
+    rrt = RRT(start=start, goal=goal, boundary=barrier_vertices, obstacles=obstacles, sampleArea=center_bounds, turtle_radius=turtle_radius, alg='rrtstar', dof=dof, maxIter=maxIter, maxReplan=maxReplan)
     path = rrt.planning(animation=show_animation)
 
     endtime = time.time()
@@ -525,9 +519,8 @@ def main():
     else:
         print("SUCCESS - found path of cost %.5f in %.2fsec"%(RRT.get_path_len(path), endtime - starttime))
     # Draw final path
-    if not args.blind:
-        rrt.draw_graph()
-        plt.show()
+    rrt.draw_graph()
+    plt.show()
 
     if path is None:
         return np.array((np.NaN, (endtime - starttime), 0))
