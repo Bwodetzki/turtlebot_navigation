@@ -329,7 +329,7 @@ class RRT():
         modified_costs = [dist(newNode.state, self.nodeList[node].state) + newNode.cost for node in nearinds]
         for i in range(len(nearinds)):
             condition, _ = self.steerTo(newNode, self.nodeList[nearinds[i]])
-            if (modified_costs[i] < curr_costs[i]) & condition:
+            if (modified_costs[i] < curr_costs[i]) and condition:
                 newNode.children.add(nearinds[i])
                 self.nodeList[self.nodeList[nearinds[i]].parent].children.remove(nearinds[i])
                 self.nodeList[nearinds[i]].parent = newNodeIndex
