@@ -21,8 +21,6 @@ env_dir_prefix = 'env' # prefix for environment directories
 env_data_file_prefix = 'env' # prefix for environment data files
 env_data_file_suffix = '.dat'
 
-
-
 # Functions
 def get_curr_env_idx():
     if env_parent_dir.exists():
@@ -317,7 +315,7 @@ def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array
         rect_cols = [rectangle_col_checker(state, start, radius) for state in obstacles]
         condition =  (not any(rect_cols)) and is_inside_boundary(vertices, start, radius)
         if condition:
-                break
+            break
         iters+=1
     assert (iters != max_iters)  # Did not converge to the start position in the given # of iterations
 
@@ -330,7 +328,7 @@ def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array
         rect_cols = [rectangle_col_checker(state, goal, radius) for state in obstacles]
         condition =  (not any(rect_cols)) and is_inside_boundary(vertices, goal, radius) and np.linalg.norm(start-goal)>dist
         if condition:
-                break
+            break
         iters+=1
     assert (iters != max_iters)  # Did not converge to the goal position in the given # of iterations
 
