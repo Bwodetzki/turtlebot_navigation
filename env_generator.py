@@ -64,6 +64,7 @@ def generate_paths(boundary_vertices, obstacles, sg_params, RRTs_params, plot=Fa
     i=0
     path = None
     while path is None and i<max_iters:
+        # print('here')
         start, goal, angle = generate_start_goal(boundary_vertices, 
                                         obstacles, 
                                         sg_params['radius'], 
@@ -107,7 +108,7 @@ if __name__=='__main__':
     obstacle_params = {
         'center_bounds' : [-env_size, env_size],
         'edge_len_bounds' : [0.1, 2],
-        'num_obstacles' : 10,
+        'num_obstacles' : 15,
         'obstacle_seed' : None
     }
 
@@ -130,8 +131,8 @@ if __name__=='__main__':
         'numMeasurements' : 360
     }
 
-    num_envs = 5
-    num_paths = 2
+    num_envs = 10
+    num_paths = 3
     env_parent_dir = Path("./envData").absolute().resolve() 
     plot_env = True
     plot_path = True
@@ -151,7 +152,9 @@ if __name__=='__main__':
             # Generate and save lidar            
             measurements = get_lidar_measurements(path, angle, lidar_params)
             save_lidar(measurements, curr_env_idx=env_idx, path_idx=path_idx, env_parent_dir=env_parent_dir)
+        # print('end')
         sim.clear_sim()
         if plot_env or plot_path:
+            plt.gca().axis('equal')
             plt.show()
     sim.disconnect()

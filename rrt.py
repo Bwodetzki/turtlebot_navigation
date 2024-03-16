@@ -80,16 +80,14 @@ class RRT():
         counter = 0  # Counts how many iters have passed since a solution has been found, breaks after 5!!
 
         for i in range(self.maxIter):
-            print(i)
+            # print(i)
             rnd = self.generatesample()
             nind = self.GetNearestListIndex(self.nodeList, rnd)
 
-            if i==0:
+            if i==0 and not animation:
                 rnd_valid, rnd_cost = self.steerTo(self.end, self.start)
                 if rnd_valid:
-                    rnd = self.end
-                    if not animation:
-                        break_flag=True
+                    return [self.end.state, self.start.state]
                 else:
                     rnd_valid, rnd_cost = self.steerTo(rnd, self.nodeList[nind])
             else:
@@ -126,10 +124,9 @@ class RRT():
 
                 if self.is_near_goal(newNode):
                     is_valid_sol, cost = self.steerTo(self.end, newNode)
-                    if is_valid_sol or cost==None:
+                    if is_valid_sol:
                         self.solutionSet.add(newNodeIndex)
                         self.goalfound = True
-
 
                 if animation:
                     self.draw_graph(rnd.state)
@@ -279,7 +276,13 @@ class RRT():
         Returns: a list of coordinates, representing the path backwards. Traverse this list in reverse order to follow the path from start to end
         """
         path = [self.end.state]
-        while self.nodeList[goalind].parent is not None:
+        # Hunting for bugs
+        valid_sol, cost = self.steerTo(self.end, self.nodeList[goalind])
+        if not valid_sol:
+            print(cost)
+            print('here')
+
+        while self.nodeList[goalind].parent is not None:            
             node = self.nodeList[goalind]
             path.append(node.state)
             goalind = node.parent
