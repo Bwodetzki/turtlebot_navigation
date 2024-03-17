@@ -120,7 +120,7 @@ if __name__=='__main__':
     }
 
     RRTs_params = {
-        'sample_bounds' : np.array((-env_size, env_size)),
+        'sample_bounds' : np.array((env_size*2, env_size*2)),
         'turtle_radius' : 0.5,
         'max_iters' : 30,
         'max_replan' : 5
