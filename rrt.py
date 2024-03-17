@@ -16,6 +16,7 @@ import matplotlib as mpl
 import time
 import collision_checker as cc
 import env_manager as em
+from functools import lru_cache
 
 
 def diff(v1, v2):
@@ -30,6 +31,7 @@ def magnitude(v):
     """
     return math.sqrt(sum([x*x for x in v]))
 
+@lru_cache(maxsize=1024)
 def dist(p1, p2):
     """
     Computes the Euclidean distance (L2 norm) between two points p1 and p2
@@ -80,19 +82,19 @@ class RRT():
         break_flag=False
         counter = 0  # Counts how many iters have passed since a solution has been found, breaks after 5!!
 
+        direct_path_valid, _ = self.steerTo(self.end, self.start)
+        if direct_path_valid:
+            print(f'Direct path successful. Skipping planning...')
+            return [self.end.state, self.start.state]
+        else:
+            print(f'Direct path unsuccessful. Beginning planning...')
+
         for i in range(self.maxIter):
-            # print(i)
+            print(f'Planning iteration: {i}')
             rnd = self.generatesample()
             nind = self.GetNearestListIndex(self.nodeList, rnd)
 
-            if i==0:
-                rnd_valid, rnd_cost = self.steerTo(self.end, self.start)
-                if rnd_valid:
-                    return [self.end.state, self.start.state]
-                else:
-                    rnd_valid, rnd_cost = self.steerTo(rnd, self.nodeList[nind])
-            else:
-                rnd_valid, rnd_cost = self.steerTo(rnd, self.nodeList[nind])
+            rnd_valid, rnd_cost = self.steerTo(rnd, self.nodeList[nind])
 
             if self.goalfound == True:
                     counter+=1
@@ -205,8 +207,10 @@ class RRT():
                 if not self.__CollisionCheck(stateCurr):
                     return (False, None)
 
+                newState = np.array(stateCurr.state)
                 for j in range(0,self.dof):
-                    stateCurr.state[j] += dists[j]
+                    newState[j] += dists[j]
+                stateCurr.state = tuple(newState)
 
             if not self.__CollisionCheck(dest):
                 return (False, None)
@@ -229,12 +233,18 @@ class RRT():
             while iters < max_iters:
                 # Generate Sample
                 sample = (2*np.random.rand(2)-1)*self.sampleArea
+                success = True
 
-                # Check Conditions for Start
-                rect_cols = [cc.rectangle_col_checker(state, sample, self.turtle_radius) for state in self.obstacles]
-                condition =  (not any(rect_cols)) and cc.is_inside_boundary(self.boundary, sample, self.turtle_radius)
-                if condition:
-                        break
+                # Check if point is inside boundary and does not collide with any obstacles
+                if cc.is_inside_boundary(self.boundary, sample, self.turtle_radius):
+                    for obstacle in self.obstacles:
+                        if cc.rectangle_col_checker(obstacle, sample, self.turtle_radius):
+                            success = False
+                            break
+                else:
+                    success = False
+                if success:
+                    break
                 iters+=1
             assert (iters != max_iters)  # Did not converge to the start position in the given # of iterations
             rnd = Node(sample)
@@ -249,8 +259,9 @@ class RRT():
 
         Returns: True if node is within 5 units of the goal state; False otherwise
         """
-        d = dist(node.state, self.end.state)
-        if d < 5.0:
+        max_dist_to_goal = 2.5
+        dist_to_goal = dist(node.state, self.end.state)
+        if dist_to_goal < max_dist_to_goal:
             return True
         return False
 
@@ -328,13 +339,14 @@ class RRT():
         curr_costs = [self.nodeList[node].cost for node in nearinds]
         modified_costs = [dist(newNode.state, self.nodeList[node].state) + newNode.cost for node in nearinds]
         for i in range(len(nearinds)):
-            condition, _ = self.steerTo(newNode, self.nodeList[nearinds[i]])
-            if (modified_costs[i] < curr_costs[i]) and condition:
-                newNode.children.add(nearinds[i])
-                self.nodeList[self.nodeList[nearinds[i]].parent].children.remove(nearinds[i])
-                self.nodeList[nearinds[i]].parent = newNodeIndex
-                self.nodeList[nearinds[i]].cost = modified_costs[i]
-                self.nodeList[nearinds[i]].update_childrens_cost(self.nodeList)
+            if modified_costs[i] < curr_costs[i]:
+                condition, _ = self.steerTo(newNode, self.nodeList[nearinds[i]])
+                if condition:
+                    newNode.children.add(nearinds[i])
+                    self.nodeList[self.nodeList[nearinds[i]].parent].children.remove(nearinds[i])
+                    self.nodeList[nearinds[i]].parent = newNodeIndex
+                    self.nodeList[nearinds[i]].cost = modified_costs[i]
+                    self.nodeList[nearinds[i]].update_childrens_cost(self.nodeList)
             else:
                 pass
 
@@ -363,10 +375,12 @@ class RRT():
         You will need to modify this for question 2 (if self.geom == 'circle') and question 3 (if self.geom == 'rectangle')
         """
         point = node.state
-        rect_cols = [cc.rectangle_col_checker(state, point, self.turtle_radius) for state in self.obstacles]
-        is_valid =  (not any(rect_cols)) and cc.is_inside_boundary(self.boundary, point, self.turtle_radius)
-
-        return is_valid  # safe'''
+        if not cc.is_inside_boundary(self.boundary, point, self.turtle_radius):
+            return False
+        for obstacle in self.obstacles:
+            if cc.rectangle_col_checker(obstacle, point, self.turtle_radius):
+                return False
+        return True
 
     def get_path_to_goal(self):
         """
@@ -447,7 +461,7 @@ class Node():
     """
 
     def __init__(self,state):
-        self.state = state
+        self.state = tuple(state)
         self.cost = 0.0
         self.parent = None
         self.children = set()

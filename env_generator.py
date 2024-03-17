@@ -122,8 +122,8 @@ if __name__=='__main__':
     RRTs_params = {
         'sample_bounds' : np.array((env_size*2, env_size*2)),
         'turtle_radius' : 0.5,
-        'max_iters' : 30,
-        'max_replan' : 5
+        'max_iters' : 100,
+        'max_replan' : 0
     }
 
     lidar_params = {
@@ -132,21 +132,23 @@ if __name__=='__main__':
         'numMeasurements' : 360
     }
 
-    num_envs = 10
-    num_paths = 3
+    num_envs = 3
+    num_paths = 10
     env_parent_dir = Path("./envData").absolute().resolve() 
     plot_env = True
     plot_path = True
 
     for env_idx in range(num_envs):
+        print(f'Generating environment {env_idx}')
         boundary_vertices, obstacles = generate_env(boundary_params, obstacle_params, plot_env)
         save_env(boundary_vertices, obstacles, env_idx=env_idx, env_parent_dir=env_parent_dir)  # NOTE: This overwrites other envs
-        # Connect to physics server (for lidar)
+
         sim.create_sim(gui=False, load_turtle=False)
         load_boundary(boundary_vertices)
         load_obstacles(obstacles)
 
         for path_idx in range(num_paths):
+            print(f'Generating path {path_idx}')
             path, angle = generate_paths(boundary_vertices, obstacles, start_goal_params, RRTs_params, plot_path)
             save_path(path, angle, curr_env_idx=env_idx, path_idx=path_idx, env_parent_dir=env_parent_dir)
 

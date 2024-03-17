@@ -250,7 +250,8 @@ def generate_obstacles(vertices, center_bounds=[10, 10], edge_len_bounds=[0.1, 2
     if attempts == max_attempts:
         raise Exception('Failed to generate obstacles')
 
-    return list(zip(centers, edge_lengths, angles))
+    # represent obstacles with tuples so they are hashable and enable caching
+    return [(tuple(center), tuple(edge_length), angle) for center, edge_length, angle in zip(centers, edge_lengths, angles)]
 
 def plot_obstacle(obstacle, ax=None):
     center, edge_lengths, angle = obstacle
@@ -313,8 +314,14 @@ def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array
         start = (2*np.random.rand(2)-1)*center_bounds
 
         # Check Conditions for Start
-        obstacle_collisions = [rectangle_col_checker(obstacle, start, radius) for obstacle in obstacles]
-        success =  (not any(obstacle_collisions)) and is_inside_boundary(vertices, start, radius)
+        success = True
+        if is_inside_boundary(vertices, start, radius):
+            for obstacle in obstacles:
+                if rectangle_col_checker(obstacle, start, radius):
+                    success = False
+                    break
+        else:
+            success = False
         if success:
             break
         attempts+=1
@@ -328,8 +335,14 @@ def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array
         goal = (2*np.random.rand(2)-1)*center_bounds
 
         # Check Conditions for Goal
-        obstacle_collisions = [rectangle_col_checker(state, goal, radius) for state in obstacles]
-        success =  (not any(obstacle_collisions)) and is_inside_boundary(vertices, goal, radius) and np.linalg.norm(start-goal)>dist
+        success = True
+        if np.linalg.norm(start-goal)>dist and is_inside_boundary(vertices, goal, radius):
+            for obstacle in obstacles:
+                if rectangle_col_checker(obstacle, goal, radius):
+                    success = False
+                    break
+        else:
+            success = False
         if success:
             break
         attempts+=1
