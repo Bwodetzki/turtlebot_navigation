@@ -132,8 +132,8 @@ if __name__=='__main__':
         'numMeasurements' : 360
     }
 
-    num_envs = 3
-    num_paths = 10
+    num_envs = 10
+    num_paths = 1
     env_parent_dir = Path("./envData").absolute().resolve() 
     plot_env = True
     plot_path = True

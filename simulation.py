@@ -20,7 +20,7 @@ def connected():
         return False
     return True
 
-def create_sim(gui=True, load_turtle=True):
+def create_sim(gui=True, load_turtle=True, turtle_opts={'pos':[0,0,0], 'orn':[0,0,0,1]}):
     """Create and connect to a physics server, optionally with a GUI visualizer
 
     Args:
@@ -35,11 +35,13 @@ def create_sim(gui=True, load_turtle=True):
         else:
             physics_server_id = p.connect(p.DIRECT)
         p.configureDebugVisualizer(flag=p.COV_ENABLE_KEYBOARD_SHORTCUTS, enable=0)
-        if load_turtle:
-            turtle = p.loadURDF("turtlebot.urdf",turtle_offset)
+
         plane = p.loadURDF("plane.urdf")
         p.setRealTimeSimulation(1)
         p.setGravity(0,0,-10)
+        if load_turtle:
+            turtle = p.loadURDF("turtlebot.urdf",turtle_opts['pos'],turtle_opts['orn'])
+            return turtle
 
 def clear_sim():
     p.resetSimulation()

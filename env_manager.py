@@ -89,7 +89,7 @@ def save_path(path, angle, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent
 def load_path(path_file):
     with open(str(path_file), 'rb') as p_fp:
         data = pickle.load(p_fp)
-    return (data[0], data[1])  # Tuple of start and goal
+    return (data[0], data[1])  # Tuple of path and angle
 
 def save_lidar(measurements, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
     path_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}' / f'{path_dir_prefix}{path_idx}'

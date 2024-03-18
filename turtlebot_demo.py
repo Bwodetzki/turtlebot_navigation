@@ -4,26 +4,26 @@ import simulation as sim
 
 sim.create_sim()
 
-sim.create_box((0,3,1), (2,2,2))
+# sim.create_box((0,3,1), (2,2,2))
 
-# Include Table
-obs_offset = [-3, 0, 0]
-table = p.loadURDF("./table/table.urdf",obs_offset)
+# # Include Table
+# obs_offset = [-3, 0, 0]
+# table = p.loadURDF("./table/table.urdf",obs_offset)
 
-# This creates a square, an easy command to automatically generate envs
-quat = p.getQuaternionFromEuler([30,45,0])
-obstacle = p.createCollisionShape(p.GEOM_BOX, halfExtents=[1, 1, 1])
-mass = 0  # Make body static
-p.createMultiBody(mass, obstacle, basePosition=[0, 3, 1], baseOrientation=quat)
+# # This creates a square, an easy command to automatically generate envs
+# quat = p.getQuaternionFromEuler([30,45,0])
+# obstacle = p.createCollisionShape(p.GEOM_BOX, halfExtents=[1, 1, 1])
+# mass = 0  # Make body static
+# p.createMultiBody(mass, obstacle, basePosition=[0, 3, 1], baseOrientation=quat)
 
-turtle = p.loadURDF("turtlebot.urdf", [0, 0, 0])
-plane = p.loadURDF("plane.urdf")
-p.setRealTimeSimulation(1)
+# turtle = p.loadURDF("turtlebot.urdf", [0, 0, 0])
+# plane = p.loadURDF("plane.urdf")
+# p.setRealTimeSimulation(1)
 
-for j in range (p.getNumJoints(turtle)):
-        print(p.getJointInfo(turtle,j))
-for j in range (p.getNumJoints(sim.turtle)):
-        print(p.getJointInfo(sim.turtle,j))
+# for j in range (p.getNumJoints(turtle)):
+#         print(p.getJointInfo(turtle,j))
+# for j in range (p.getNumJoints(sim.turtle)):
+#         print(p.getJointInfo(sim.turtle,j))
 forward=0
 turn=0
 
