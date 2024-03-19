@@ -52,6 +52,12 @@ def create_box(position, dimensions, angles=[0, 0, 0], mass=0):
     obstacle = p.createCollisionShape(p.GEOM_BOX, halfExtents=[dim/2 for dim in dimensions])
     p.createMultiBody(mass, obstacle, basePosition=position, baseOrientation=quat)
 
+def create_waypoint(position, radius, color=[1, 0, 0, 1]):
+    waypoint = p.createVisualShape(p.GEOM_SPHERE, radius=radius, rgbaColor=color)
+    p.createMultiBody(baseMass=0,
+                      basePosition=position,
+                      baseVisualShapeIndex=waypoint)
+
 def step_sim(leftWheelVelocity, rightWheelVelocity):
     try: # needed if simulation stops suddenly
         p.setJointMotorControl2(turtle,0,p.VELOCITY_CONTROL,targetVelocity=leftWheelVelocity,force=1000)
@@ -178,6 +184,7 @@ def main():
     create_box([-3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
     create_box([3,-3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
     create_box([-3,-3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
+    create_waypoint([1, 0, 0.25], radius=1/8)
     forward=0
     turn=0
     startTime = time.time()

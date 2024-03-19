@@ -253,6 +253,14 @@ def generate_obstacles(vertices, center_bounds=[10, 10], edge_len_bounds=[0.1, 2
     # represent obstacles with tuples so they are hashable and enable caching
     return [(tuple(center), tuple(edge_length), angle) for center, edge_length, angle in zip(centers, edge_lengths, angles)]
 
+def load_waypoints(path, height=1/4, radius=1/8):
+    path = np.hstack((path, np.ones((len(path),1))*height))
+
+    sim.create_waypoint(path[0], radius=radius, color=[0, 0, 1, 1])
+    for i in range(1, len(path)-1):
+        sim.create_waypoint(path[i], radius=radius, color=[0, 1, 0, 1])
+    sim.create_waypoint(path[-1], radius=radius, color=[1, 0, 0, 1])
+
 def plot_obstacle(obstacle, ax=None):
     center, edge_lengths, angle = obstacle
     x_len = edge_lengths[0]
