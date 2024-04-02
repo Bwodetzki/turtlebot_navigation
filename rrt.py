@@ -329,7 +329,7 @@ class RRT():
         return path_node_list
     
     def downsample(self, path):
-        plt.clf()
+        # plt.clf()
         n_path = np.array(path)
         # plt.plot(n_path[:, 0], n_path[:, 1])
         new_ind = 0

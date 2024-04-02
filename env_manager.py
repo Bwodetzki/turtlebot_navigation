@@ -101,7 +101,6 @@ def save_lidar(measurements, curr_env_idx=0, path_idx=0, env_parent_dir=env_pare
     measurement_file = path_dir / file_name
     with open(str(measurement_file), 'wb') as measurements_fp:
         pickle.dump(measurements, measurements_fp)
-    
     return measurement_file
 
 def load_lidar(measurement_file):
@@ -109,6 +108,22 @@ def load_lidar(measurement_file):
         data = pickle.load(m_fp)
     return data  # Tuple of start and goal
 
+def save_data(data_points, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
+    path_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}'
+    try:
+        makedirs(str(path_dir))
+    except:
+        pass
+    file_name = f'data_{len(data_points)}_points{path_data_file_suffix}'  # Start Goal Configuration
+    data_file = path_dir / file_name
+    with open(str(data_file), 'wb') as data_fp:
+        pickle.dump(data_points, data_fp)
+    return data_file
+
+def load_data_points(data_file):
+    with open(str(data_file), 'rb') as d_fp:
+        data_points = pickle.load(d_fp)
+    return data_points  # list of all datapoints
 
 def generate_boundary(center: Tuple[float, float], avg_radius: float,
                      irregularity: float, spikiness: float,
