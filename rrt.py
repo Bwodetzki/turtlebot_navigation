@@ -43,7 +43,7 @@ class RRT():
     Class for RRT Planning
     """
 
-    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5):
+    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5, downsample_size=3):
         """
         Sets algorithm parameters
 
@@ -69,6 +69,7 @@ class RRT():
 
         self.goalfound = False
         self.solutionSet = set()
+        self.downsample_size = downsample_size
 
     def planning(self, animation=False):
         """
@@ -327,22 +328,25 @@ class RRT():
         path_node_list = [path_node_list[0]] + upper_list
         return path_node_list
     
-    def downsample(self, path, downsample_resolution=3):
-        # plt.clf()
+    def downsample(self, path):
+        plt.clf()
         n_path = np.array(path)
         # plt.plot(n_path[:, 0], n_path[:, 1])
+        new_ind = 0
         for i in range(len(path)-1):
             vector = n_path[i+1] - n_path[i]
             length = np.linalg.norm(vector)
-            num_subsamples = int(length//downsample_resolution)
+            num_subsamples = int(length//self.downsample_size)
             subsample_vec_mag = length/(num_subsamples+1)
 
+            j = 0
             for j in range(1, num_subsamples+1):
                 subsample = subsample_vec_mag*j*vector/length + n_path[i]
-                plt.plot(subsample[0], subsample[1], 'ro')
-                path.insert(i+j, tuple(subsample))
+                # plt.plot(subsample[0], subsample[1], 'ro')
+                path.insert(new_ind+j, tuple(subsample))
+            new_ind = new_ind+j+1
 
-        return path  # Not done!!
+        return path 
 
     def find_near_nodes(self, newNode):
         """
@@ -526,7 +530,8 @@ def rrt_star(boundary, obstacles, start, goal, RRTs_params):
               alg='rrtstar', 
               dof=2, 
               maxIter=RRTs_params['max_iters'],
-              maxReplan=RRTs_params['max_replan'])
+              maxReplan=RRTs_params['max_replan'],
+              downsample_size=RRTs_params['downsample_size'])
     path = rrt.planning(animation=False)
     return path
     
@@ -551,7 +556,7 @@ def main():
 
     center_bounds = [20,20]
     edge_len_bounds = [0.1, 2]
-    num_obstacles = 10
+    num_obstacles = 15
     max_iters = 1000
     obstacles = em.generate_obstacles(barrier_vertices, center_bounds, edge_len_bounds, obstacle_seed, num_obstacles, max_iters)
 

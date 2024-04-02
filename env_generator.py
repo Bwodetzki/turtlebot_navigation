@@ -115,7 +115,8 @@ if __name__=='__main__':
         'sample_bounds' : np.array((env_size*2, env_size*2)),
         'turtle_radius' : 0.5,
         'max_iters' : 100,
-        'max_replan' : 0
+        'max_replan' : 0,
+        'downsample_size' : 3
     }
 
     lidar_params = {
@@ -124,7 +125,7 @@ if __name__=='__main__':
         'numMeasurements' : 360
     }
 
-    num_envs = 10
+    num_envs = 5
     num_paths = 1
     env_parent_dir = Path("./envData").absolute().resolve() 
     plot_env = True
