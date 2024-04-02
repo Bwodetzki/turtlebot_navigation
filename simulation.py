@@ -58,6 +58,67 @@ def create_waypoint(position, radius, color=[1, 0, 0, 1]):
                       basePosition=position,
                       baseVisualShapeIndex=waypoint)
 
+def localLidar(botPos: tuple[float, float, float], botAngle: float, lidarDist: float = 1, lidarAngle: float = 2*np.pi, numMeasurements: int = 360, draw: bool = False, eraseOld: bool = True):
+    """Calculate and optionally draw lidar measurements given a position and lidar parameters.
+
+    Args:
+        botPos (tuple[float, float, float]): X, Y, and Z coordinates of the bot (actual lidar is run above the bot).
+        botAngle (float): Head angle of the bot.
+        lidarDist (float, optional): Distance each lidar sensor can detect up to. Defaults to 1.
+        lidarAngle (float, optional): Spread of lidar sensor angles on the bot. Centered around the bot's head angle. Defaults to 2*np.pi.
+        numMeasurements (int, optional): Number of lidar sensors. Defaults to 360.
+        draw (bool, optional): Draws visual objects showing lidar sensors' range and hit fractions. Defaults to False.
+        eraseOld (bool, optional): When draw is True, erases old visual objects when drawing new ones. Defaults to True.
+
+    Returns:
+        list[float]: list of hit fractions between 0 and 1
+    """
+    visualRayWidth = 0.01 # width of visual rays drawn when "draw" is True
+    visualRayNonCollisionColor = [0, 1, 0] # RGB from 0-1 for visual rays until collision point
+    visualRayCollisionColor = [1, 0, 0] # RGB from 0-1 for visual rays after collision point
+    fullVisual = False # shows full extent of lidar lines, even through obstacles
+    sensor_height = 1 # taller than the bot so rays won't intersect with its body
+    bot_radius = .17 # just smaller than the bot radius to stop rays from starting inside a very close obstacle
+    relStartAngle = -lidarAngle/2 # relative start angle to bot heading angle
+    worldStartAngle = botAngle + relStartAngle
+    if numMeasurements > 1:
+        angleStep = lidarAngle/(numMeasurements-1)
+    else:
+        angleStep = 0
+    measurementAngles = [worldStartAngle + angleIdx*(angleStep) for angleIdx in range(numMeasurements)]
+    rayStartPoints = [np.array(botPos) + bot_radius*np.array([np.cos(angle), np.sin(angle), sensor_height]) for angle in measurementAngles]
+    rayEndPoints = [startPoint + lidarDist*np.array([np.cos(angle), np.sin(angle), 0]) for startPoint, angle in zip(rayStartPoints, measurementAngles)]
+    rayInfoArray = p.rayTestBatch(rayStartPoints, rayEndPoints)
+    measurements = [hit_fraction for _, _, hit_fraction, _, _ in rayInfoArray]
+    if draw:
+        if eraseOld:
+            if len(localLidar.oldVisuals) > 0: # the first time this is called, this array will be empty
+                for idx, (rayStart, rayEnd, measurement) in enumerate(zip(rayStartPoints, rayEndPoints, measurements)):
+                    collisionPoint = rayStart + measurement * (rayEnd - rayStart)
+                    if fullVisual:
+                        idx1 = 2*idx
+                        idx2 = 2*idx + 1
+                    else:
+                        idx1 = idx
+                        idx2 = None # value should never be used
+                    localLidar.oldVisuals[idx1] = p.addUserDebugLine(rayStart, collisionPoint, visualRayNonCollisionColor, visualRayWidth, 0, replaceItemUniqueId=localLidar.oldVisuals[idx1])
+                    if fullVisual:
+                        localLidar.oldVisuals[idx2] = p.addUserDebugLine(collisionPoint, rayEnd, visualRayCollisionColor, visualRayWidth, 0, replaceItemUniqueId=localLidar.oldVisuals[idx2])
+            else:
+                for rayStart, rayEnd, measurement in zip(rayStartPoints, rayEndPoints, measurements):
+                    collisionPoint = rayStart + measurement * (rayEnd - rayStart)
+                    localLidar.oldVisuals.append(p.addUserDebugLine(rayStart, collisionPoint, visualRayNonCollisionColor, visualRayWidth, 0))
+                    if fullVisual:
+                        localLidar.oldVisuals.append(p.addUserDebugLine(collisionPoint, rayEnd, visualRayCollisionColor, visualRayWidth, 0))
+        else:
+            for rayStart, rayEnd, measurement in zip(rayStartPoints, rayEndPoints, measurements):
+                collisionPoint = rayStart + measurement * (rayEnd - rayStart)
+                p.addUserDebugLine(rayStart, collisionPoint, visualRayNonCollisionColor, visualRayWidth, 0)
+                if fullVisual:
+                    p.addUserDebugLine(collisionPoint, rayEnd, visualRayCollisionColor, visualRayWidth, 0)
+    return measurements
+localLidar.oldVisuals = []
+
 def step_sim(leftWheelVelocity, rightWheelVelocity):
     try: # needed if simulation stops suddenly
         p.setJointMotorControl2(turtle,0,p.VELOCITY_CONTROL,targetVelocity=leftWheelVelocity,force=1000)
@@ -162,22 +223,6 @@ def getTurtleInfo():
     '''
     return p.getBasePositionAndOrientation(turtle)
 
-def localLidar(botPos: tuple[float, float, float], botAngle: float, lidarDist: float = 1, lidarAngle: float = 2*np.pi, numMeasurements: int = 360):
-    sensor_height = 1 # taller than the bot so rays won't intersect with its body
-    bot_radius = .17 # just smaller than the bot radius to stop rays from starting inside a very close obstacle
-    relStartAngle = -lidarAngle/2 # relative start angle to bot heading angle
-    worldStartAngle = botAngle + relStartAngle
-    if numMeasurements > 1:
-        angleStep = lidarAngle/(numMeasurements-1)
-    else:
-        angleStep = 0
-    measurementAngles = [worldStartAngle + angleIdx*(angleStep) for angleIdx in range(numMeasurements)]
-    rayStartPoints = [np.array(botPos) + bot_radius*np.array([np.cos(angle), np.sin(angle), sensor_height]) for angle in measurementAngles]
-    rayEndPoints = [startPoint + lidarDist*np.array([np.cos(angle), np.sin(angle), 0]) for startPoint, angle in zip(rayStartPoints, measurementAngles)]
-    rayInfoArray = p.rayTestBatch(rayStartPoints, rayEndPoints)
-    measurements = [hit_fraction for _, _, hit_fraction, _, _ in rayInfoArray]
-    return measurements
-
 def main():
     create_sim()
     create_box([3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
@@ -188,7 +233,7 @@ def main():
     forward=0
     turn=0
     startTime = time.time()
-    samplePeriod = 1 # seconds
+    samplePeriod = 5 # seconds
     while connected(): # use sim.connected() instead of plt.isConnected so we don't need a server id
         time.sleep(1./240.)
         leftWheelVelocity, rightWheelVelocity, forward, turn = keyboard_control(forward, turn, speed=30)
@@ -198,7 +243,7 @@ def main():
         if currTime > startTime + samplePeriod:
             turtle_pos, turtle_orientation = getTurtleInfo()
             turtle_orientation = p.getEulerFromQuaternion(turtle_orientation)[-1]
-            lidarResults = localLidar(turtle_pos, turtle_orientation, lidarAngle=np.pi, numMeasurements=3)
+            lidarResults = localLidar(turtle_pos, turtle_orientation, lidarDist=10, lidarAngle=2*np.pi, numMeasurements=36, draw=True, eraseOld=True)
             print(f'{turtle_orientation = }')
             print(f'{lidarResults = }')
             startTime = currTime
