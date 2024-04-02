@@ -11,21 +11,13 @@ def get_lidar_measurements(path, angle, lidar_params):
     measurements = []
     path = np.hstack((path, np.zeros((len(path), 1))))
 
-    hit_fraction = sim.localLidar(path[0], 
-                              angle,
-                              lidar_params['lidarDist'],
-                              lidar_params['lidarAngle'],
-                              lidar_params['numMeasurements'])
+    hit_fraction = sim.localLidar(path[0], angle)
     measurements.append(hit_fraction)
 
     for i in range(1, len(path)):
         vector = path[i] - path[i-1]
         angle = np.arctan2(vector[1], vector[0])  # Angle is relative to previous path points
-        hit_fraction = sim.localLidar(path[i], 
-                              angle,
-                              lidar_params['lidarDist'],
-                              lidar_params['lidarAngle'],
-                              lidar_params['numMeasurements'])
+        hit_fraction = sim.localLidar(path[i], angle)
         measurements.append(hit_fraction)
     # Now we can doctor our measurements here. Do we want to use polar coordinates for each measurement?
     measurements = np.array(measurements)*lidar_params['lidarDist']
@@ -138,6 +130,7 @@ if __name__=='__main__':
     plot_env = True
     plot_path = True
 
+    sim.initLidar(lidar_params['lidarDist'], lidar_params['lidarAngle'], lidar_params['numMeasurements'])
     for env_idx in range(num_envs):
         print(f'Generating environment {env_idx}')
         boundary_vertices, obstacles = generate_env(boundary_params, obstacle_params, plot_env)
