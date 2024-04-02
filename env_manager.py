@@ -275,7 +275,7 @@ def plot_obstacle(obstacle, ax=None):
         ax.plot([obs[0, 0], obs[-1, 0]], [obs[0, 1], obs[-1, 1]], 'g')
 
 def load_boundary(vertices):
-    wallHeight = 1
+    wallHeight = 2
     precision = 0.1
     maxBoundaryDim = np.max(abs(vertices))
     heightFieldDim = math.ceil(2*maxBoundaryDim/precision)
