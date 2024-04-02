@@ -85,7 +85,8 @@ class RRT():
         direct_path_valid, _ = self.steerTo(self.end, self.start)
         if direct_path_valid:
             print(f'Direct path successful. Skipping planning...')
-            return [self.end.state, self.start.state]
+            path = self.downsample([self.end.state, self.start.state])
+            return path
         else:
             print(f'Direct path unsuccessful. Beginning planning...')
 
@@ -279,7 +280,7 @@ class RRT():
         return pathLen
 
 
-    def gen_final_course(self, goalind):
+    def gen_final_course(self, goalind, use_lvc=True, use_downsample=True):
         """
         Traverses up the tree to find the path from start to goal
 
@@ -289,17 +290,59 @@ class RRT():
         """
         path = [self.end.state]
         # Hunting for bugs
-        valid_sol, cost = self.steerTo(self.end, self.nodeList[goalind])
-        if not valid_sol:
-            print(cost)
-            print('here')
-
+        # valid_sol, cost = self.steerTo(self.end, self.nodeList[goalind])
+        # if not valid_sol:
+        #     print(cost)
+        #     print('here')
+        path_node_list = [self.end]
         while self.nodeList[goalind].parent is not None:            
             node = self.nodeList[goalind]
             path.append(node.state)
+            path_node_list.append(node)
             goalind = node.parent
         path.append(self.start.state)
+        path_node_list.append(self.start)
+
+        if use_lvc:
+            new_path_node_list = self.lvc(path_node_list)
+            path = [node.state for node in new_path_node_list]
+
+        if use_downsample:
+            path = self.downsample(path)
+
         return path
+    
+    def lvc(self, path_node_list):
+        if len(path_node_list) <= 2:
+            return path_node_list
+        
+        for i in range(len(path_node_list)-1, 0+1, -1):
+            connection, _ = self.steerTo(path_node_list[0], path_node_list[i])
+            if connection:
+                # delete elements from (0+1, i]
+                path_node_list = [path_node_list[idx] for idx in range(len(path_node_list)) if (idx == 0) or (idx >= i)]
+                break
+            
+        upper_list = self.lvc(path_node_list[1:])
+        path_node_list = [path_node_list[0]] + upper_list
+        return path_node_list
+    
+    def downsample(self, path, downsample_resolution=3):
+        # plt.clf()
+        n_path = np.array(path)
+        # plt.plot(n_path[:, 0], n_path[:, 1])
+        for i in range(len(path)-1):
+            vector = n_path[i+1] - n_path[i]
+            length = np.linalg.norm(vector)
+            num_subsamples = int(length//downsample_resolution)
+            subsample_vec_mag = length/(num_subsamples+1)
+
+            for j in range(1, num_subsamples+1):
+                subsample = subsample_vec_mag*j*vector/length + n_path[i]
+                plt.plot(subsample[0], subsample[1], 'ro')
+                path.insert(i+j, tuple(subsample))
+
+        return path  # Not done!!
 
     def find_near_nodes(self, newNode):
         """
@@ -534,6 +577,9 @@ def main():
         print("SUCCESS - found path of cost %.5f in %.2fsec"%(RRT.get_path_len(path), endtime - starttime))
     # Draw final path
     rrt.draw_graph()
+    path_plot = np.array(path)
+    if path is not None:
+        plt.plot(path_plot[:, 0], path_plot[:, 1], 'ro--')
     plt.show()
 
     if path is None:
