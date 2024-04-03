@@ -44,8 +44,7 @@ def generate_env(by_params, obs_params, plot=False):
         except:
             ax = plt.subplots()
         # This is our boundary
-        ax.plot(boundary_vertices[:, 0], boundary_vertices[:, 1], 'b')
-        ax.plot([boundary_vertices[0, 0], boundary_vertices[-1, 0]], [boundary_vertices[0, 1], boundary_vertices[-1, 1]], 'b')
+        em.plot_boundary(boundary_vertices, ax=ax)
 
         # These are our obstacles
         for obstacle in obstacles:

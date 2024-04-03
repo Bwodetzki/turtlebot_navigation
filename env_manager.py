@@ -268,6 +268,14 @@ def generate_obstacles(vertices, center_bounds=[10, 10], edge_len_bounds=[0.1, 2
     # represent obstacles with tuples so they are hashable and enable caching
     return [(tuple(center), tuple(edge_length), angle) for center, edge_length, angle in zip(centers, edge_lengths, angles)]
 
+def plot_boundary(boundary, ax=None):
+    if ax is None:
+        plt.plot(boundary[:, 0], boundary[:, 1], 'b')
+        plt.plot([boundary[0, 0], boundary[-1, 0]], [boundary[0, 1], boundary[-1, 1]], 'b')
+    else:
+        ax.plot(boundary[:, 0], boundary[:, 1], 'b')
+        ax.plot([boundary[0, 0], boundary[-1, 0]], [boundary[0, 1], boundary[-1, 1]], 'b')
+
 def plot_obstacle(obstacle, ax=None):
     center, edge_lengths, angle = obstacle
     x_len = edge_lengths[0]
@@ -359,7 +367,7 @@ def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array
 
     return (start, goal, start_angle)
 
-def main():
+def _manualEnvGeneration():
     generate_envs = True # after each iteration, prompts user to save or discard current env
     show_plot = True
     run_sim = False
@@ -431,6 +439,31 @@ def main():
             else:
                 print('Environment discarded')
 
+def _testLidarPlotting():
+    botPos = [0,0,0]
+    botAngle = 0
+    lidarDist = 10
+    lidarAngle = 2*np.pi
+    numMeasurements = 360
+    boundaryFile = './envData/env0/env_boundary.dat'
+    obstaclesFile = './envData/env0/env_obstacles.dat'
+    with open(str(boundaryFile), 'rb') as boundary_fp:
+        boundary = pickle.load(boundary_fp)
+    with open(str(obstaclesFile), 'rb') as obstacles_fp:
+        obstacles = pickle.load(obstacles_fp)
+    ax = plt.subplot()
+    plot_boundary(boundary, ax=ax)
+    for obstacle in obstacles:
+        plot_obstacle(obstacle, ax=ax)
+    sim.create_sim(gui=False)
+    sim.initLidar(lidarDist, lidarAngle, numMeasurements)
+    load_boundary(boundary)
+    load_obstacles(obstacles)
+    measurements = sim.localLidar(botPos, botAngle)
+    sim.plotLidar(botPos, botAngle, measurements, ax)
+    plt.show()
+    sim.disconnect()
+
 # Main code
 if __name__=='__main__':
-    main()
+    _testLidarPlotting()

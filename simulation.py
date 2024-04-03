@@ -1,5 +1,6 @@
 import time
 import numpy as np
+import matplotlib.pyplot as plt
 import pybullet as p
 
 physics_server_id = None
@@ -10,10 +11,30 @@ turtle = None
 lidar = None
 
 class Lidar():
+    botRadius = .17 # just smaller than the bot radius to stop rays from starting inside a very close obstacle
+    sensorHeight = 1 # taller than the bot so rays won't intersect with its body
     def __init__(self, lidarDist, lidarAngle, numMeasurements):
         self.dist = lidarDist
         self.spreadAngle = lidarAngle
         self.numMeasurements = numMeasurements
+    def measurementAngles(self, botAngle):
+        relStartAngle = -self.spreadAngle/2 # relative start angle to bot heading angle
+        worldStartAngle = botAngle + relStartAngle
+        if self.numMeasurements > 1:
+            angleStep = lidar.spreadAngle/(lidar.numMeasurements-1)
+        else:
+            angleStep = 0
+        return [worldStartAngle + angleIdx*(angleStep) for angleIdx in range(lidar.numMeasurements)]
+    def sensorRays(self, botPos, botAngle):
+        measurementAngles = self.measurementAngles(botAngle)
+        rayStartPoints = [np.array(botPos) + self.botRadius*np.array([np.cos(angle), np.sin(angle), 0] + np.array([0, 0, self.sensorHeight])) for angle in measurementAngles]
+        rayEndPoints = [startPoint + self.dist*np.array([np.cos(angle), np.sin(angle), 0]) for startPoint, angle in zip(rayStartPoints, measurementAngles)]
+        return list(zip(rayStartPoints, rayEndPoints))
+    def getMeasurements(self, botPos, botAngle):
+        rayStartPoints, rayEndPoints = zip(*self.sensorRays(botPos, botAngle))
+        rayInfoArray = p.rayTestBatch(rayStartPoints, rayEndPoints)
+        measurements = [hit_fraction for _, _, hit_fraction, _, _ in rayInfoArray]
+        return measurements
 
 def disconnect():
     global physics_server_id
@@ -70,7 +91,6 @@ def initLidar(lidarDist: float = 1, lidarAngle: float = 2*np.pi, numMeasurements
     global lidar
     lidar = Lidar(lidarDist, lidarAngle, numMeasurements)
 
-
 def localLidar(botPos: tuple[float, float, float], botAngle: float, draw: bool = False, eraseOld: bool = True):
     """Calculate and optionally draw lidar measurements given a position and lidar parameters.
 
@@ -91,19 +111,8 @@ def localLidar(botPos: tuple[float, float, float], botAngle: float, draw: bool =
     visualRayNonCollisionColor = [0, 1, 0] # RGB from 0-1 for visual rays until collision point
     visualRayCollisionColor = [1, 0, 0] # RGB from 0-1 for visual rays after collision point
     fullVisual = False # shows full extent of lidar lines, even through obstacles
-    sensor_height = 1 # taller than the bot so rays won't intersect with its body
-    bot_radius = .17 # just smaller than the bot radius to stop rays from starting inside a very close obstacle
-    relStartAngle = -lidar.spreadAngle/2 # relative start angle to bot heading angle
-    worldStartAngle = botAngle + relStartAngle
-    if lidar.numMeasurements > 1:
-        angleStep = lidar.spreadAngle/(lidar.numMeasurements-1)
-    else:
-        angleStep = 0
-    measurementAngles = [worldStartAngle + angleIdx*(angleStep) for angleIdx in range(lidar.numMeasurements)]
-    rayStartPoints = [np.array(botPos) + bot_radius*np.array([np.cos(angle), np.sin(angle), sensor_height]) for angle in measurementAngles]
-    rayEndPoints = [startPoint + lidar.dist*np.array([np.cos(angle), np.sin(angle), 0]) for startPoint, angle in zip(rayStartPoints, measurementAngles)]
-    rayInfoArray = p.rayTestBatch(rayStartPoints, rayEndPoints)
-    measurements = [hit_fraction for _, _, hit_fraction, _, _ in rayInfoArray]
+    rayStartPoints, rayEndPoints = zip(*lidar.sensorRays(botPos, botAngle))
+    measurements = lidar.getMeasurements(botPos, botAngle)
     if draw:
         if eraseOld:
             if len(localLidar.oldVisuals) > 0: # the first time this is called, this array will be empty
@@ -132,6 +141,22 @@ def localLidar(botPos: tuple[float, float, float], botAngle: float, draw: bool =
                     p.addUserDebugLine(collisionPoint, rayEnd, visualRayCollisionColor, visualRayWidth, 0)
     return measurements
 localLidar.oldVisuals = []
+
+def plotLidar(botPos, botAngle, measurements=None, ax: plt.Axes = None):
+    global lidar
+    if ax is None:
+        ax = plt.subplot()
+    rayStartPoints, rayEndPoints = zip(*lidar.sensorRays(botPos, botAngle))
+    if measurements is None:
+        measurements = lidar.getMeasurements(botPos, botAngle)
+    collisionPoints = []
+    for rayStart, rayEnd, measurement in zip(rayStartPoints, rayEndPoints, measurements):
+        collisionPoints.append(rayStart + measurement * (rayEnd - rayStart))
+    collisionPoints = np.array(collisionPoints).T
+    collisionDists = np.array([np.linalg.norm(collision-start) for collision,start in zip(collisionPoints.T, rayStartPoints)])
+    collisionDists *= 1/np.max(collisionDists)
+    ax.scatter(botPos[0], botPos[1], marker='o', c=[[0, 0, 1]])
+    ax.scatter(collisionPoints[0,:], collisionPoints[1,:], marker='x', c=[[weight, 1-weight, 0] for weight in collisionDists])
 
 def step_sim(leftWheelVelocity, rightWheelVelocity, visualizeLidar=False):
     try: # needed if simulation stops suddenly
@@ -220,7 +245,6 @@ def keyboard_control(forward, turn, speed=10, camStep=0.1, camAngleStep=1):
                 camPitch += camAngleStep # tilt camera up
             if (k == ord('x') and (v&p.KEY_IS_DOWN)):
                 camPitch -= camAngleStep # tilt camera down
-
 
         for event in p.getMouseEvents():
             if freeCam and event[0] == 1:
