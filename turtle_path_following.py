@@ -7,7 +7,7 @@ import simulation as sim
 from env_manager import load_env, load_path, load_waypoints
 import time
 def main():
-    env_num = 0
+    env_num = 9
     path_num = 0
     speed=20
     eps = 1e-1
@@ -47,6 +47,11 @@ def main():
 
         if error<eps and node<(len(path)-1):
             node+=1
+        elif error<eps and node == len(path)-1:
+            time.sleep(2)
+            node = 0
+            # p.resetBasePositionAndOrientation()
+            p.resetBasePositionAndOrientation(turtle, turtle_ops['pos'], turtle_ops['orn'])
 
 if __name__=='__main__':
     main()
