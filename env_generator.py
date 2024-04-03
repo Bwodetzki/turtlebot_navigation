@@ -80,7 +80,7 @@ def generate_paths(boundary_vertices, obstacles, sg_params, RRTs_params, plot=Fa
         # Start ang Goal
         ax.plot(start[0], start[1], 'ro', label='start')
         ax.plot(goal[0], goal[1], 'mo', label='goal')
-        ax.plot(path[:, 0], path[:, 1])
+        ax.plot(path[:, 0], path[:, 1], 'ro-')
 
     return path, angle
 
@@ -146,17 +146,18 @@ if __name__=='__main__':
     }
 
     lidar_params = {
-        'lidarDist' : 1,
+        'lidarDist' : env_size*2.5,
         'lidarAngle' : 2*np.pi,
-        'numMeasurements' : 360
+        'numMeasurements' : 360*2
     }
 
-    num_envs = 5
+    num_envs = 10
     num_paths = 1
-    num_data_points = 4
+    num_data_points = 1
     env_parent_dir = Path("./envData").absolute().resolve() 
-    plot_env = False
-    plot_path = False
+    plot_env = True
+    plot_path = True
+    plot_lidar = True
 
     sim.initLidar(lidar_params['lidarDist'], lidar_params['lidarAngle'], lidar_params['numMeasurements'])
     for env_idx in range(num_envs):
@@ -180,6 +181,12 @@ if __name__=='__main__':
             # Generate and save lidar            
             measurements = get_lidar_measurements(path, angle, lidar_params)
             em.save_lidar(measurements, curr_env_idx=env_idx, path_idx=path_idx, env_parent_dir=env_parent_dir)
+            
+            # Plot Lidar (Just to test)
+            i = 1
+            vector = path[i] - path[i-1]
+            angle = np.arctan2(vector[1], vector[0])
+            sim.plotLidar(np.concatenate((path[i], [0])), angle, measurements[i], ax=plt.gca())
 
             # Generate Nice Data
             data_points = data_points + data_from_path(path, angle, measurements)

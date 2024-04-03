@@ -221,7 +221,7 @@ class RRT():
         else:
             return (False, None)
 
-    def generatesample(self, max_iters=100):
+    def generatesample(self, max_iters=1000):
         """
         Randomly generates a sample, to be used as a new node.
         This sample may be invalid - if so, call generatesample() again.
@@ -304,6 +304,9 @@ class RRT():
         path.append(self.start.state)
         path_node_list.append(self.start)
 
+        if use_downsample:
+            path, path_node_list = self.downsample(path, node_list=True)
+        
         if use_lvc:
             new_path_node_list = self.lvc(path_node_list)
             path = [node.state for node in new_path_node_list]
@@ -328,7 +331,7 @@ class RRT():
         path_node_list = [path_node_list[0]] + upper_list
         return path_node_list
     
-    def downsample(self, path):
+    def downsample(self, path, node_list=False):
         # plt.clf()
         n_path = np.array(path)
         # plt.plot(n_path[:, 0], n_path[:, 1])
@@ -345,8 +348,12 @@ class RRT():
                 # plt.plot(subsample[0], subsample[1], 'ro')
                 path.insert(new_ind+j, tuple(subsample))
             new_ind = new_ind+j+1
-
-        return path 
+        
+        if node_list:
+            path_node_list = [Node(path_point) for path_point in path]
+            return path, path_node_list
+        else:
+            return path
 
     def find_near_nodes(self, newNode):
         """
