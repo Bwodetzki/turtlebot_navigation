@@ -84,7 +84,7 @@ class RRT():
         counter = 0  # Counts how many iters have passed since a solution has been found, breaks after 5!!
 
         direct_path_valid, _ = self.steerTo(self.end, self.start)
-        if direct_path_valid:
+        if direct_path_valid and False:
             print(f'Direct path successful. Skipping planning...')
             path = self.downsample([self.end.state, self.start.state])
             return path
@@ -310,10 +310,6 @@ class RRT():
         if use_lvc:
             new_path_node_list = self.lvc(path_node_list)
             path = [node.state for node in new_path_node_list]
-
-        if use_downsample:
-            path = self.downsample(path)
-
         return path
     
     def lvc(self, path_node_list):
@@ -325,6 +321,8 @@ class RRT():
             if connection:
                 # delete elements from (0+1, i]
                 path_node_list = [path_node_list[idx] for idx in range(len(path_node_list)) if (idx == 0) or (idx >= i)]
+                path = [node.state for node in path_node_list]
+                _, path_node_list = self.downsample(path, node_list=True)
                 break
             
         upper_list = self.lvc(path_node_list[1:])
@@ -455,7 +453,7 @@ class RRT():
         else:
             return None
 
-    def draw_graph(self, rnd=None):
+    def draw_graph(self, path=None, rnd=None):
         """
         Draws the state space, with the tree, obstacles, and shortest path (if found). Useful for visualization.
 
@@ -491,10 +489,11 @@ class RRT():
 
 
         if self.goalfound:
-            path = self.get_path_to_goal()
+            if path is None:
+                path = self.get_path_to_goal()
             x = [p[0] for p in path]
             y = [p[1] for p in path]
-            plt.plot(x, y, '-r')
+            plt.plot(x, y, '-or')
 
         if rnd is not None:
             plt.plot(rnd[0], rnd[1], "^k")

@@ -7,7 +7,7 @@ import simulation as sim
 from env_manager import load_env, load_path, load_waypoints
 import time
 def main():
-    env_num = 4
+    env_num = 0
     path_num = 0
     speed=20
     eps = 1e-1
