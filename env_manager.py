@@ -291,26 +291,16 @@ def plot_obstacle(obstacle, ax=None):
 
 def load_boundary(vertices):
     wallHeight = 2
-    precision = 0.1
-    maxBoundaryDim = np.max(abs(vertices))
-    heightFieldDim = math.ceil(2*maxBoundaryDim/precision)
-    height_field = np.zeros((heightFieldDim, heightFieldDim))
+    wallWidth = 0.01
     for idx in range(-1, np.size(vertices, axis=0)-1):
         vertex1 = vertices[idx, :]
         vertex2 = vertices[idx+1, :]
         diff = vertex2 - vertex1
-        dist = np.sqrt(np.dot(diff, diff))
-        direction = diff/dist
-        for step in range(math.ceil(dist/precision)):
-            worldCoords = vertex1 + step*precision*direction
-            x, y = worldCoords/precision + np.array([heightFieldDim/2, heightFieldDim/2])
-            x = _clip(round(x), 0, heightFieldDim-1)
-            y = _clip(round(y), 0, heightFieldDim-1)
-            height_field[y,x] = wallHeight
-    height_field = height_field.flatten()
-    boundary_shape = p.createCollisionShape(shapeType = p.GEOM_HEIGHTFIELD, meshScale=[precision, precision, 1], heightfieldData=height_field, numHeightfieldRows=heightFieldDim, numHeightfieldColumns=heightFieldDim)
-    boundary  = p.createMultiBody(0, boundary_shape)
-    p.resetBasePositionAndOrientation(boundary,[0,0,0], [0,0,0,1])
+        segmentCenter = 1/2 * (vertex1 + vertex2)
+        segmentCenter = np.concatenate((segmentCenter, np.array([wallHeight/2])))
+        segmentLength = np.sqrt(np.dot(diff, diff))
+        angle = np.arctan2(diff[1], diff[0])
+        sim.create_box(segmentCenter, dimensions=[segmentLength, wallWidth, wallHeight], angles=[0, 0, angle], mass=0)
 
 def load_obstacles(obstacles):
     for center, edge_length, angle in obstacles:

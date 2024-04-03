@@ -242,7 +242,11 @@ def getTurtleInfo():
     return p.getBasePositionAndOrientation(turtle)
 
 def main():
+    import env_manager as em
+    boundaryFile = './envData/env0/env_boundary.dat'
+    obstaclesFile = './envData/env0/env_obstacles.dat'
     create_sim()
+    em.load_env(boundaryFile, obstaclesFile)
     create_box([3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
     create_box([-3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
     create_box([3,-3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
