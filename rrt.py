@@ -84,7 +84,7 @@ class RRT():
         counter = 0  # Counts how many iters have passed since a solution has been found, breaks after 5!!
 
         direct_path_valid, _ = self.steerTo(self.end, self.start)
-        if direct_path_valid and False:
+        if direct_path_valid:
             print(f'Direct path successful. Skipping planning...')
             path = self.downsample([self.end.state, self.start.state])
             return path
