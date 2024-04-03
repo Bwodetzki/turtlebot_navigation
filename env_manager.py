@@ -317,6 +317,13 @@ def load_obstacles(obstacles):
         angle = [0, 0, angle]
         sim.create_box(center, edge_length, angle)
 
+def load_waypoints(path, height=0.25, radius=0.25/2):
+    sim.create_waypoint(np.concatenate((path[0], [height])), radius, color = [0, 1, 0, 1])
+    for path_point in path[1:-1]:
+        path_point = np.concatenate((path_point, [height]))
+        sim.create_waypoint(path_point, radius, color = [1, 0, 0, 1])
+    sim.create_waypoint(np.concatenate((path[-1], [height])), radius, color = [0, 0, 1, 1])
+
 def generate_start_goal(vertices, obstacles, radius=0.75, center_bounds=np.array((10, 10)), dist=1, seed=None, max_attempts=1000):
     if seed is not None:
         np.random.seed(seed)

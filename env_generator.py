@@ -151,7 +151,7 @@ if __name__=='__main__':
         'numMeasurements' : 360*2
     }
 
-    num_envs = 10
+    num_envs = 5
     num_paths = 1
     num_data_points = 1
     env_parent_dir = Path("./envData").absolute().resolve() 
