@@ -65,7 +65,8 @@ def generate_paths(boundary_vertices, obstacles, sg_params, RRTs_params, plot=Fa
                                         sg_params['sg_seed'])
         path = rrt_star(boundary_vertices, obstacles, start, goal, RRTs_params)
         i+=1
-    assert i!=max_iters  # Did not converge
+    if i!=max_iters:  # Did not converge
+        raise Exception("RRT Did not Converge")
 
     path.reverse()
     path = np.array(path)
@@ -117,7 +118,7 @@ def main(startEnvIdx, numEnvs, numDataPoints, envParentDir, plotEnv, plotPath):
     if plotPath is None:
         plotPath = False
 
-    env_size=10
+    env_size=20
     boundary_params = {
         'center' : (0,0),
         'avg_radius' : env_size,
@@ -130,8 +131,8 @@ def main(startEnvIdx, numEnvs, numDataPoints, envParentDir, plotEnv, plotPath):
 
     obstacle_params = {
         'center_bounds' : [env_size*2, env_size*2],
-        'edge_len_bounds' : [0.1, 2],
-        'num_obstacles' : 15,
+        'edge_len_bounds' : [1, 3],
+        'num_obstacles' : 30,
         'obstacle_seed' : None
     }
 

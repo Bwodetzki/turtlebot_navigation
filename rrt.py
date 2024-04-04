@@ -248,7 +248,9 @@ class RRT():
                 if success:
                     break
                 iters+=1
-            assert (iters != max_iters)  # Did not converge to the start position in the given # of iterations
+            if (iters != max_iters):  # Did not converge to the start position in the given # of iterations
+                raise Exception("RRT Failed to Sample Points")
+
             rnd = Node(sample)
         else:
             rnd = self.end
