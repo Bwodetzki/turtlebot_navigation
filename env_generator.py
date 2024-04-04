@@ -111,7 +111,12 @@ def data_from_path(path, angle, lidar_measurements):
         data_points.append(data_point)
     return data_points
 
-if __name__=='__main__':
+def main(startEnvIdx, numEnvs, numDataPoints, envParentDir, plotEnv, plotPath):
+    if plotEnv is None:
+        plotEnv = False
+    if plotPath is None:
+        plotPath = False
+
     env_size=10
     boundary_params = {
         'center' : (0,0),
@@ -139,8 +144,8 @@ if __name__=='__main__':
 
     RRTs_params = {
         'sample_bounds' : np.array((env_size*2, env_size*2)),
-        'turtle_radius' : 0.5,
-        'max_iters' : 100,
+        'turtle_radius' : 0.25,
+        'max_iters' : 150,
         'max_replan' : 0,
         'downsample_size' : 3
     }
@@ -151,32 +156,33 @@ if __name__=='__main__':
         'numMeasurements' : 360*2
     }
 
-    num_envs = 5
-    num_paths = 1
-    num_data_points = 1
-    env_parent_dir = Path("./envData").absolute().resolve() 
-    em.set_parent_dir(env_parent_dir)
-    plot_env = True
-    plot_path = True
-    plot_lidar = True
-
+    if envParentDir is not None:
+        em.set_parent_dir(envParentDir)
     sim.initLidar(lidar_params['lidarDist'], lidar_params['lidarAngle'], lidar_params['numMeasurements'])
-    for env_idx in range(num_envs):
+    sim.create_sim(gui=False, load_turtle=False)
+    for env_idx in range(startEnvIdx, startEnvIdx + numEnvs):
         print(f'Generating environment {env_idx}')
-        boundary, obstacles = generate_env(boundary_params, obstacle_params, plot_env)
+        boundary, obstacles = generate_env(boundary_params, obstacle_params, plotEnv)
+        if plotEnv:
+            plt.gca().axis('equal')
+            plt.show()
         em.save_env(boundary, obstacles, env_idx)  # NOTE: This overwrites other envs
 
-        sim.create_sim(gui=False, load_turtle=False)
         em.load_boundary(boundary)
         em.load_obstacles(obstacles)
 
         # for path_idx in range(num_paths):
-        num_points = 0
         path_idx = 0
         data_points = []
-        while num_points < num_data_points:
+        while len(data_points) < numDataPoints:
+            if plotPath:
+                # redraw env
+                em.plot_boundary(boundary, ax=plt.gca())
+                for obstacle in obstacles:
+                    em.plot_obstacle(obstacle, ax=plt.gca())
+                
             print(f'Generating path {path_idx}')
-            path, angle = generate_paths(boundary, obstacles, start_goal_params, RRTs_params, plot_path)
+            path, angle = generate_paths(boundary, obstacles, start_goal_params, RRTs_params, plotPath)
             em.save_path(path, angle, env_idx, path_idx)
             
             # Generate and save lidar            
@@ -184,27 +190,41 @@ if __name__=='__main__':
             em.save_lidar(measurements, env_idx, path_idx)
             
             # Plot Lidar (Just to test)
-            i = 1
-            vector = path[i] - path[i-1]
-            angle = np.arctan2(vector[1], vector[0])
-            sim.plotLidar(np.concatenate((path[i], [0])), angle, measurements[i], ax=plt.gca())
+            if plotPath:
+                sim.plotLidar(np.concatenate((path[0], [0])), angle, measurements[0], ax=plt.gca())
+                for pathPoint1, pathPoint2, measurement in zip(path, path[1:], measurements[1:]):
+                    vector = pathPoint2 - pathPoint1
+                    currAngle = np.arctan2(vector[1], vector[0])
+                    sim.plotLidar(np.concatenate((pathPoint2, [0])), currAngle, measurement, ax=plt.gca())
 
             # Generate Nice Data
             data_points = data_points + data_from_path(path, angle, measurements)
 
             # Step 
             path_idx += 1
-            num_points += len(data_points)
 
             # Plotting
-            sim.clear_sim()
-            if plot_env or plot_path:
+            if plotPath:
                 plt.gca().axis('equal')
                 plt.show()
         # Save Data
-        data_points = data_points[:num_data_points]  # Trim the excess
+        data_points = data_points[:numDataPoints]  # Trim the excess
         em.save_data(data_points, env_idx)
+        sim.clear_sim()
     sim.disconnect()
 
     file = em.data_file_fpath(0)
     data_points = em.load_data_points(file)
+
+if __name__=='__main__':
+    from argparse import ArgumentParser
+    parser = ArgumentParser(add_help=True)
+    parser.add_argument('--startEnvIdx', type=int, default=0, help="First index used when saving environments")
+    parser.add_argument('--numEnvs', type=int, default=5, help="Number of environments to generate and save")
+    parser.add_argument('--numDataPoints', type=int, default=10, help="Number of data points to save per environment")
+    parser.add_argument('--envParentDir', type=str, help="Parent directory to store all environment directories in")
+    parser.add_argument('--plotEnv', '-penv', action='store_true', help="Plot the environments as they generate")
+    parser.add_argument('--plotPath', '-ppath', action='store_true', help="Plot the paths as they generate")
+    args = parser.parse_args()
+
+    main(args.startEnvIdx, args.numEnvs, args.numDataPoints, args.envParentDir, args.plotEnv, args.plotPath)
