@@ -38,7 +38,9 @@ def max_path_idx(envIdx):
         return max(path_idxs)
     return 0
 
-def set_parent_dir(newParentDir: Path):
+def set_parent_dir(newParentDir: Path | str):
+    if type(newParentDir) == str:
+        newParentDir = Path(newParentDir).absolute().resolve()
     global env_parent_dir
     env_parent_dir = newParentDir
 
