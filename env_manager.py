@@ -17,42 +17,64 @@ import time
 from collision_checker import is_inside_boundary, rectangle_col_checker
 
 env_parent_dir = Path("./envData").absolute().resolve() # parent directory all other environment directories are in
-env_dir_prefix = 'env' # prefix for environment directories
-env_data_file_prefix = 'env' # prefix for environment data files
-env_data_file_suffix = '.dat'
-path_dir_prefix = 'path' # prefix for path directories
-path_data_file_prefix = 'path' # prefix for path data files
-path_data_file_suffix = '.dat'
+env_data_file_suffix = '.dat' # used because data is stored with pickle package
+path_data_file_suffix = '.dat' # used because data is stored with pickle package
 
 # Functions
-def get_curr_env_idx():
+def max_env_idx():
     if env_parent_dir.exists():
-        env_idxs = [int(env.stem.strip(env_dir_prefix)) for env in env_parent_dir.iterdir() if env.is_dir()]
-        return max(env_idxs) + 1
+        env_idxs = [int(env.stem.strip('env')) for env in env_parent_dir.iterdir() if env.is_dir()]
+        if len(env_idxs) == 0:
+            return 0
+        return max(env_idxs)
     return 0
 
-def save_curr_env(boundary, obstacles):
-    curr_env_idx = get_curr_env_idx()
-    curr_env_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}'
-    makedirs(str(curr_env_dir))
-    curr_env_boundary_file = curr_env_dir / f'{env_data_file_prefix}_boundary{env_data_file_suffix}'
-    curr_env_obstacles_file = curr_env_dir / f'{env_data_file_prefix}_obstacles{env_data_file_suffix}'
-    with open(str(curr_env_boundary_file), 'wb') as boundary_fp:
-        pickle.dump(boundary, boundary_fp)
-    with open(str(curr_env_obstacles_file), 'wb') as obstacles_fp:
-        pickle.dump(obstacles, obstacles_fp)
+def max_path_idx(envIdx):
+    env_dir = env_dir_fpath(envIdx)
+    if env_dir.exists():
+        path_idxs = [int(path.stem.strip('path')) for path in env_dir.iterdir() if path.is_dir()]
+        if len(path_idxs) == 0:
+            return 0
+        return max(path_idxs)
+    return 0
 
-def save_env(boundary, obstacles, env_idx, env_parent_dir=env_parent_dir):
-    curr_env_dir = env_parent_dir / f'{env_dir_prefix}{env_idx}'
-    try:
-        makedirs(str(curr_env_dir))
-    except:
-        pass
-    curr_env_boundary_file = curr_env_dir / f'{env_data_file_prefix}_boundary{env_data_file_suffix}'
-    curr_env_obstacles_file = curr_env_dir / f'{env_data_file_prefix}_obstacles{env_data_file_suffix}'
-    with open(str(curr_env_boundary_file), 'wb') as boundary_fp:
+def set_parent_dir(newParentDir: Path):
+    global env_parent_dir
+    env_parent_dir = newParentDir
+
+def env_dir_fpath(envIdx):
+    return env_parent_dir / f'env{envIdx}'
+
+def boundary_file_fpath(envIdx):
+    return env_dir_fpath(envIdx) / f'boundary{env_data_file_suffix}'
+
+def obstacles_file_fpath(envIdx):
+    return env_dir_fpath(envIdx) / f'obstacles{env_data_file_suffix}'
+
+def data_file_fpath(envIdx):
+    return env_dir_fpath(envIdx) / f'data_points{env_data_file_suffix}'
+
+def path_dir_fpath(envIdx, pathIdx):
+    return env_dir_fpath(envIdx) / f'path{pathIdx}'
+
+def path_file_fpath(envIdx, pathIdx):
+    return path_dir_fpath(envIdx, pathIdx) / f'path{path_data_file_suffix}'
+
+def measurements_file_fpath(envIdx, pathIdx):
+    return path_dir_fpath(envIdx, pathIdx) / f'measurements{path_data_file_suffix}'
+
+def save_new_env(boundary, obstacles):
+    new_env_idx = max_env_idx() + 1
+    save_env(boundary, obstacles, new_env_idx)
+
+def save_env(boundary, obstacles, env_idx):
+    boundary_file = boundary_file_fpath(env_idx)
+    obstacles_file = obstacles_file_fpath(env_idx)
+    makedirs(boundary_file.parent, exist_ok=True)
+    makedirs(obstacles_file.parent, exist_ok=True)
+    with open(boundary_file, 'wb') as boundary_fp:
         pickle.dump(boundary, boundary_fp)
-    with open(str(curr_env_obstacles_file), 'wb') as obstacles_fp:
+    with open(obstacles_file, 'wb') as obstacles_fp:
         pickle.dump(obstacles, obstacles_fp)
 
 def load_env(boundary_file, obstacles_file):
@@ -63,27 +85,21 @@ def load_env(boundary_file, obstacles_file):
     load_boundary(boundary)
     load_obstacles(obstacles)
 
-def save_start_goal(start, goal, angle, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
+def save_start_goal(start, goal, angle, env_idx, path_idx):
     path = np.vstack((start, goal))
-    sg_file = save_path(path, angle, curr_env_idx, path_idx, env_parent_dir)
+    sg_file = save_path(path, angle, env_idx, path_idx)
     return sg_file
 
 def load_start_goal(sg_file):
     path, angle = load_path(sg_file)
     return(path[0], path[1], angle)  # Tuple of start and goal
 
-def save_path(path, angle, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
+def save_path(path, angle, env_idx, path_idx):
     data = (path, angle)  # tuple, 1st entry:numpy array of path, second entry: start angle
-    path_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}' / f'{path_dir_prefix}{path_idx}'
-    try:
-        makedirs(str(path_dir))
-    except:
-        pass
-    file_name = f'{path_data_file_prefix}{path_data_file_suffix}'  # Start Goal Configuration
-    path_file = path_dir / file_name
+    path_file = path_file_fpath(env_idx, path_idx)
+    makedirs(path_file.parent, exist_ok=True)
     with open(str(path_file), 'wb') as path_fp:
         pickle.dump(data, path_fp)
-    
     return path_file
 
 def load_path(path_file):
@@ -91,14 +107,9 @@ def load_path(path_file):
         data = pickle.load(p_fp)
     return (data[0], data[1])  # Tuple of path and angle
 
-def save_lidar(measurements, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
-    path_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}' / f'{path_dir_prefix}{path_idx}'
-    try:
-        makedirs(str(path_dir))
-    except:
-        pass
-    file_name = f'measurements{path_data_file_suffix}'  # Start Goal Configuration
-    measurement_file = path_dir / file_name
+def save_lidar(measurements, env_idx, path_idx):
+    measurement_file = measurements_file_fpath(env_idx, path_idx)
+    makedirs(measurement_file.parent, exist_ok=True)
     with open(str(measurement_file), 'wb') as measurements_fp:
         pickle.dump(measurements, measurements_fp)
     return measurement_file
@@ -108,14 +119,9 @@ def load_lidar(measurement_file):
         data = pickle.load(m_fp)
     return data  # Tuple of start and goal
 
-def save_data(data_points, curr_env_idx=0, path_idx=0, env_parent_dir=env_parent_dir):
-    path_dir = env_parent_dir / f'{env_dir_prefix}{curr_env_idx}'
-    try:
-        makedirs(str(path_dir))
-    except:
-        pass
-    file_name = f'data_{len(data_points)}_points{path_data_file_suffix}'  # Start Goal Configuration
-    data_file = path_dir / file_name
+def save_data(data_points, env_idx):
+    data_file = data_file_fpath(env_idx)
+    makedirs(data_file.parent, exist_ok=True)
     with open(str(data_file), 'wb') as data_fp:
         pickle.dump(data_points, data_fp)
     return data_file
@@ -214,23 +220,6 @@ def _clip(value, lower, upper):
     """
     return min(upper, max(value, lower))
 
-def _visualize(vertices):
-    black = (0, 0, 0)
-    white = (255, 255, 255)
-    img = Image.new('RGB', (500, 500), white)
-    im_px_access = img.load()
-    draw = ImageDraw.Draw(img)
-
-    # either use .polygon(), if you want to fill the area with a solid colour
-    draw.polygon(vertices, outline=black, fill=white)
-
-    # or .line() if you want to control the line thickness, or use both methods together!
-    # draw.line(vertices + [vertices[0]], width=2, fill=black)
-
-    img.show()
-
-    # now you can save the image (img), or do whatever else you want with it.
-
 def generate_obstacles(vertices, center_bounds=[10, 10], edge_len_bounds=[0.1, 2], seed=None, n=2, max_attempts=1000):
     bounding_box = np.array(center_bounds)
     if seed is not None:
@@ -297,12 +286,12 @@ def plot_obstacle(obstacle, ax=None):
         ax.plot(obs[:, 0], obs[:, 1], 'g')
         ax.plot([obs[0, 0], obs[-1, 0]], [obs[0, 1], obs[-1, 1]], 'g')
 
-def load_boundary(vertices):
+def load_boundary(boundary):
     wallHeight = 2
     wallWidth = 0.01
-    for idx in range(-1, np.size(vertices, axis=0)-1):
-        vertex1 = vertices[idx, :]
-        vertex2 = vertices[idx+1, :]
+    for idx in range(-1, np.size(boundary, axis=0)-1):
+        vertex1 = boundary[idx, :]
+        vertex2 = boundary[idx+1, :]
         diff = vertex2 - vertex1
         segmentCenter = 1/2 * (vertex1 + vertex2)
         segmentCenter = np.concatenate((segmentCenter, np.array([wallHeight/2])))
@@ -403,8 +392,8 @@ def _manualEnvGeneration():
         min_dist_from_start_to_goal = 1
         start, goal, angle = generate_start_goal(boundary_vertices, obstacles, radius, center_bounds, min_dist_from_start_to_goal, sg_seed)
 
-        file = save_start_goal(start, goal, angle)
-        load_start_goal(file)
+        # file = save_start_goal(start, goal, angle)
+        # load_start_goal(file)
 
         if show_plot:
             ax = plt.subplot()
@@ -440,8 +429,8 @@ def _manualEnvGeneration():
 
         if generate_envs:
             if input("Save this environment y/(n)? ") in ['y', 'Y', 'yes', 'Yes']:
-                save_curr_env(boundary_vertices, obstacles)
-                save_start_goal(start, goal, angle, get_curr_env_idx()-1)
+                save_new_env(boundary_vertices, obstacles)
+                save_start_goal(start, goal, angle, max_env_idx(), 0)
                 print('Environment saved')
             else:
                 print('Environment discarded')
@@ -452,8 +441,9 @@ def _testLidarPlotting():
     lidarDist = 10
     lidarAngle = 2*np.pi
     numMeasurements = 360
-    boundaryFile = './envData/env0/env_boundary.dat'
-    obstaclesFile = './envData/env0/env_obstacles.dat'
+    envIdx = 0
+    boundaryFile = boundary_file_fpath(envIdx)
+    obstaclesFile = obstacles_file_fpath(envIdx)
     with open(str(boundaryFile), 'rb') as boundary_fp:
         boundary = pickle.load(boundary_fp)
     with open(str(obstaclesFile), 'rb') as obstacles_fp:
@@ -473,4 +463,5 @@ def _testLidarPlotting():
 
 # Main code
 if __name__=='__main__':
-    _testLidarPlotting()
+    _manualEnvGeneration()
+    # _testLidarPlotting()

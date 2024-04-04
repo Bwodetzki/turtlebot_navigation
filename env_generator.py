@@ -155,6 +155,7 @@ if __name__=='__main__':
     num_paths = 1
     num_data_points = 1
     env_parent_dir = Path("./envData").absolute().resolve() 
+    em.set_parent_dir(env_parent_dir)
     plot_env = True
     plot_path = True
     plot_lidar = True
@@ -162,11 +163,11 @@ if __name__=='__main__':
     sim.initLidar(lidar_params['lidarDist'], lidar_params['lidarAngle'], lidar_params['numMeasurements'])
     for env_idx in range(num_envs):
         print(f'Generating environment {env_idx}')
-        boundary_vertices, obstacles = generate_env(boundary_params, obstacle_params, plot_env)
-        em.save_env(boundary_vertices, obstacles, env_idx=env_idx, env_parent_dir=env_parent_dir)  # NOTE: This overwrites other envs
+        boundary, obstacles = generate_env(boundary_params, obstacle_params, plot_env)
+        em.save_env(boundary, obstacles, env_idx)  # NOTE: This overwrites other envs
 
         sim.create_sim(gui=False, load_turtle=False)
-        em.load_boundary(boundary_vertices)
+        em.load_boundary(boundary)
         em.load_obstacles(obstacles)
 
         # for path_idx in range(num_paths):
@@ -175,12 +176,12 @@ if __name__=='__main__':
         data_points = []
         while num_points < num_data_points:
             print(f'Generating path {path_idx}')
-            path, angle = generate_paths(boundary_vertices, obstacles, start_goal_params, RRTs_params, plot_path)
-            em.save_path(path, angle, curr_env_idx=env_idx, path_idx=path_idx, env_parent_dir=env_parent_dir)
+            path, angle = generate_paths(boundary, obstacles, start_goal_params, RRTs_params, plot_path)
+            em.save_path(path, angle, env_idx, path_idx)
             
             # Generate and save lidar            
             measurements = get_lidar_measurements(path, angle, lidar_params)
-            em.save_lidar(measurements, curr_env_idx=env_idx, path_idx=path_idx, env_parent_dir=env_parent_dir)
+            em.save_lidar(measurements, env_idx, path_idx)
             
             # Plot Lidar (Just to test)
             i = 1
@@ -202,8 +203,8 @@ if __name__=='__main__':
                 plt.show()
         # Save Data
         data_points = data_points[:num_data_points]  # Trim the excess
-        em.save_data(data_points, curr_env_idx=env_idx, path_idx=path_idx, env_parent_dir=env_parent_dir)
+        em.save_data(data_points, env_idx)
     sim.disconnect()
 
-    file = env_parent_dir / f'env{0}' / f'data_{num_data_points}_points.dat'
+    file = em.data_file_fpath(0)
     data_points = em.load_data_points(file)
