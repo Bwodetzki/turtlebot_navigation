@@ -32,22 +32,25 @@ def rect_state_to_vertices(state):
     return vertices
 
 @lru_cache(maxsize=128)
-def angles_from_polygon(polygon):
+def ordered_angles_from_polygon(polygon):
     polygon = np.array(polygon)
     angles = np.zeros(len(polygon)-1)
+    lengths = np.zeros(len(polygon)-1)
     for i in range(len(polygon)-1):
         vector = polygon[i+1] - polygon[i]
+        lengths[i] = np.linalg.norm(vector)
         angle = np.arctan2(vector[1], vector[0])  # Find angles of each edges
         if angle<0:  # is to help remove duplicates as all angles should be within 0, pi
             angle += np.pi
         angles[i] = angle
-    return angles
+    return [angle for _, angle in sorted(zip(lengths, angles))]
 
 @lru_cache(maxsize=128)
-def angle_set_from_polygon(polygon):
-    angles = angles_from_polygon(polygon)
-    angles = set(np.round(angles, decimals = 4))
-    return angles
+def ordered_angle_list_from_polygon(polygon):
+    angles = ordered_angles_from_polygon(polygon)
+    roundedAngles = np.round(angles, decimals=4)
+    angleSet = set(roundedAngles)
+    return [angle for angle in roundedAngles if angle in angleSet]
 
 @lru_cache(maxsize=256)
 def rotate_polygon(angle, polygon):
@@ -64,7 +67,7 @@ def col_checker(polygon, point, radius=0):
     point = np.array(point)
     polygon = np.vstack((polygon, polygon[0, :]))
 
-    angles = angle_set_from_polygon(tuple(tuple(vertex) for vertex in polygon))
+    angles = ordered_angle_list_from_polygon(tuple(tuple(vertex) for vertex in polygon))
 
     # Run through the angles
     for i, angle in enumerate(angles):
@@ -96,7 +99,11 @@ def arbitrary_col_checker(vertices, point):
 
     hits = 0
     for i in range(len(vertices)-1):
-        hits += intersect(vertices[i], vertices[i+1], point, point+ray)  # Adds one if intersected
+        pointXCoord = point[0]
+        # if point's x coordinate is in between the x coordinates of the two vertices, check for ray intersection
+        # (this only works because the ray is vertical)
+        if pointXCoord < max(vertices[i,0], vertices[i+1,0]) and pointXCoord > min(vertices[i,0], vertices[i+1,0]):
+            hits += intersect(vertices[i], vertices[i+1], point, point+ray)  # Adds one if intersected
     
     return is_odd(hits)
 
