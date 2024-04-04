@@ -65,7 +65,7 @@ def generate_paths(boundary_vertices, obstacles, sg_params, RRTs_params, plot=Fa
                                         sg_params['sg_seed'])
         path = rrt_star(boundary_vertices, obstacles, start, goal, RRTs_params)
         i+=1
-    if i!=max_iters:  # Did not converge
+    if i>=max_iters:  # Did not converge
         raise Exception("RRT Did not Converge")
 
     path.reverse()
