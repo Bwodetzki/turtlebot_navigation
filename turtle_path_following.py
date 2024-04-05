@@ -7,7 +7,7 @@ import simulation as sim
 from env_manager import load_env, load_path, load_waypoints
 import time
 def main():
-    env_num = 9
+    env_num = 2
     path_num = 0
     speed=20
     eps = 1e-1
@@ -18,8 +18,8 @@ def main():
     waypoint_path = path
     path = np.flip(np.hstack((path, np.zeros((path.shape[0],1)))), axis=0)  # convert to 3d
 
-    obs_file = env_path / f'env_obstacles.dat'
-    boundary_file = env_path / f'env_boundary.dat'
+    obs_file = env_path / f'obstacles.dat'
+    boundary_file = env_path / f'boundary.dat'
 
     initial_qaut = p.getQuaternionFromEuler([0, 0, angle])
     turtle_ops = {
