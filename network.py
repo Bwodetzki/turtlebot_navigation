@@ -33,5 +33,5 @@ class PlanningNetwork(nn.Module):
 
     def forward(self, x, obs):
         z = self.encoder_network(obs)
-        pred = self.fc_network(t.concatenate((x, obs)))
+        pred = self.fc_network(t.concatenate((x, z), dim=1))
         return pred
