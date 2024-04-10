@@ -1,3 +1,4 @@
+import pickle
 import torch as t
 import torch.nn as nn
 import numpy as np
@@ -21,6 +22,16 @@ def rot_mat(angle):
 def to_body_frame(pos, target, angle):
     vector = target - pos
     return rot_mat(angle)@vector
+
+def save_loss_data(data, filename):
+    with open(filename, 'wb') as f:
+        pickle.dump(data, f)
+    return filename
+
+def load_loss_data(filename):
+    with open(filename, 'rb') as f:
+        data = pickle.load(f)
+    return data
 
 def load_datapoints(env_num, env_num_max, test_size):
     # TODO: Make it load test size with a fraction or something
@@ -60,7 +71,7 @@ def format_data(data_points):
         pos = t.tensor(point.currPosition.astype(np.float32), device=DEVICE)
         end = t.tensor(point.endPosition.astype(np.float32), device=DEVICE)
         goal_vec = to_body_frame(pos, end, angle)
-        x.append(t.concatenate(goal_vec))
+        x.append(goal_vec)
 
         lidar = t.tensor(point.lidarMeasurements, device=DEVICE)
         z.append(lidar)
@@ -72,10 +83,10 @@ def format_data(data_points):
 
 def main():
     # Definitions
-    epochs = 5
+    epochs = 3
     batch_size = 20
     learning_rate = 1e-3
-    env_num_max = 500
+    env_num_max = 10
     freq = 1
     test_size = 100
     run_num = 1
@@ -180,6 +191,9 @@ def main():
     test_losses = np.array([l.to('cpu').detach() for l in test_losses])
     plt.plot(test_losses)
     plt.show()
+
+    test_loss_file = f'./models/model_perfs/test_loss{run_num}.dat'
+    save_loss_data(test_losses, test_loss_file)
 
 if __name__ == "__main__":
     main()
