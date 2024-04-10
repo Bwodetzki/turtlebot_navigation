@@ -86,6 +86,7 @@ def load_env(boundary_file, obstacles_file):
         obstacles = pickle.load(obstacles_fp)
     load_boundary(boundary)
     load_obstacles(obstacles)
+    return boundary, obstacles
 
 def save_start_goal(start, goal, angle, env_idx, path_idx):
     path = np.vstack((start, goal))

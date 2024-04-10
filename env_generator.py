@@ -1,3 +1,4 @@
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 from pathlib import Path
@@ -112,6 +113,17 @@ def data_from_path(path, angle, lidar_measurements):
         data_points.append(data_point)
     return data_points
 
+def save_params(params):
+    file = './parameters.dat'
+    with open(file, 'wb') as f:
+        pickle.dump(params, f)
+    return file
+
+def load_params(file):
+    with open(file, 'rb') as f:
+        data = pickle.load(f)
+    return data
+
 def main(startEnvIdx, numEnvs, numDataPoints, envParentDir, plotEnv, plotPath):
     if plotEnv is None:
         plotEnv = False
@@ -156,6 +168,8 @@ def main(startEnvIdx, numEnvs, numDataPoints, envParentDir, plotEnv, plotPath):
         'lidarAngle' : 2*np.pi,
         'numMeasurements' : 360*2
     }
+
+    save_params((env_size, boundary_params, obstacle_params, start_goal_params, RRTs_params, lidar_params))
 
     if envParentDir is not None:
         em.set_parent_dir(envParentDir)
