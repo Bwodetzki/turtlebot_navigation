@@ -75,7 +75,6 @@ def main(args):
         elif error<eps and node == len(path)-1:
             time.sleep(2)
             node = 0
-            # p.resetBasePositionAndOrientation()
             p.resetBasePositionAndOrientation(turtle, turtle_ops['pos'], turtle_ops['orn'])
 
 if __name__=='__main__':
