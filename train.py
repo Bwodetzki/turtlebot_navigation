@@ -80,7 +80,14 @@ def main():
 
     # Define NN
     network = PlanningNetwork(mlp_input_size=2+28, mlp_output_size=2, AE_input_size=360*2, AE_output_size=28)
-    loss_fun = nn.MSELoss(reduction='mean')
+    loss_fun = nn.MSELoss(reduction='mean')  # Theres an improvement to be made here
+    '''
+    Loss function improvement:
+    Our network should get the direction of the target vector correct, however, 
+    the magnitude of the target vector as in some cases it is somewhat arbitrary.
+    A custom loss function with a higher weight corresponding to variations in directions and
+    a lower weight for variations in magnitude may have better performance.
+    '''
 
     # Define Optimizer
     optim = t.optim.Adam(list(network.encoder_network.parameters())+list(network.fc_network.parameters()), lr=learning_rate)
