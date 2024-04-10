@@ -23,6 +23,14 @@ def load_datapoints(env_num, env_num_max, test_size):
     all_data_loaded = False if env_num < env_num_max else True  # I think this logic is good
     return data_points[:-test_size], env_num, all_data_loaded
 
+def load_test_datapoints(env_num, env_num_max, test_size):
+    # TODO: Make it load test size with a fraction or something
+    # This implementation of the function will load one environment worh of datapoints at a time
+    datafile = f"./envData/env{env_num}/data_points.dat"
+    data_points = em.load_data_points(data_file=datafile)
+    all_data_loaded = False if env_num < env_num_max else True  # I think this logic is good
+    return data_points[-test_size:], all_data_loaded
+
 def format_data(data_points):
     '''
     inputs:
@@ -52,7 +60,7 @@ def main():
     # Definitions
     epochs = 10
     batch_size = 20
-    learning_rate = 0
+    learning_rate = 1e-3
     env_num_max = 2
     freq = 1
     test_size = 100
@@ -87,6 +95,7 @@ def main():
 
     # Train Policy
     losses = []
+    test_losses = []
     for e in tqdm(range(epoch, epochs)):
         all_data_loaded=False
         leftover_datapoints = []
@@ -112,22 +121,43 @@ def main():
 
                 # Reset Gradients in Optimizer
                 optim.zero_grad()
-            # Check for Leftover Data
-            leftover_datapoints = loaded_datapoints[i+batch_size:]
 
-        # TODO: maybe Add Validation Loss
-        validation_loss=None
+            network.eval()
+            with t.no_grad():
+                curr_test_loss=0
+                num_batches = 0
+                all_data_loaded=False
+                leftover_datapoints = []
+                # Get Batch Data
+                loaded_datapoints, all_data_loaded = load_test_datapoints(counter, env_num_max, test_size)
+                loaded_datapoints = loaded_datapoints+leftover_datapoints
 
-        # Log Data
-        if e % freq == 0:
-            t.save({
-                'epoch': e+1,
-                'network_params': network.state_dict(),
-                'optimizer_state': optim.state_dict(),
-                'loss': validation_loss,
-                }, model_path)
+                # Loop Through Batches
+                for i in range(0, len(loaded_datapoints), batch_size):
+                    num_batches += 1
+                    batch = loaded_datapoints[i:i+batch_size]
+                    x, z, true = format_data(batch)
+
+                    # Calculate test_loss
+                    predictions = network.forward(x, z)
+                    test_loss = loss_fun(predictions, true)
+                    curr_test_loss += test_loss.to('cpu').detach()
+                    test_losses.append(test_loss)
+            network.train()
+
+            # Log Data
+            if e % freq == 0:
+                t.save({
+                    'epoch': e+1,
+                    'network_params': network.state_dict(),
+                    'optimizer_state': optim.state_dict(),
+                    'loss': curr_test_loss / num_batches,
+                    }, model_path)
     losses = np.array([l.to('cpu').detach() for l in losses])
     plt.plot(losses)
+    plt.show()
+    test_losses = np.array([l.to('cpu').detach() for l in test_losses])
+    plt.plot(test_losses)
     plt.show()
 
 if __name__ == "__main__":
