@@ -86,6 +86,7 @@ def create_waypoint(position, radius, color=[1, 0, 0, 1]):
     p.createMultiBody(baseMass=0,
                       basePosition=position,
                       baseVisualShapeIndex=waypoint)
+    return waypoint
 
 def initLidar(lidarDist: float = 1, lidarAngle: float = 2*np.pi, numMeasurements: int = 360):
     global lidar

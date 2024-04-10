@@ -2,7 +2,7 @@ import torch as t
 import torch.nn as nn
 
 class PlanningNetwork(nn.Module):
-    def __init__(self, mlp_input_size=5+28, mlp_output_size=2, AE_input_size=360*2, AE_output_size=28):
+    def __init__(self, mlp_input_size=2+28, mlp_output_size=2, AE_input_size=360*2, AE_output_size=28):
         super().__init__()
         params=0.5
 
