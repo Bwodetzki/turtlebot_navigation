@@ -1,4 +1,5 @@
 import pickle
+import os
 import torch as t
 import torch.nn as nn
 import numpy as np
@@ -35,6 +36,41 @@ def load_loss_data(filename):
     with open(filename, 'rb') as f:
         data = pickle.load(f)
     return data
+
+def batches(env_num_max, batch_size, test_size, starting_env_num=0):
+    newEnvFlag = False
+    batchIdx = 0
+    for envIdx in range(starting_env_num, env_num_max+1):
+        data_file = em.data_file_fpath(envIdx)
+        datapoints = em.load_data_points(data_file=data_file)
+        datapoints = datapoints[:-test_size]
+        for batchStartIdx in range(0, len(datapoints), batch_size):
+            batchEndIdx = batchStartIdx + batch_size
+            batch = datapoints[batchStartIdx:batchEndIdx]
+            x, lidarMeasurements, targets = format_data(batch)  # Goal is to have x be only the goal vector...
+            yield (envIdx, batchIdx, newEnvFlag), x, lidarMeasurements, targets
+            newEnvFlag = False
+            batchIdx += 1
+        if batchStartIdx < len(datapoints):
+            yield (envIdx, batchIdx, newEnvFlag), x, lidarMeasurements, targets
+            newEnvFlag = False
+            batchIdx += 1
+        newEnvFlag = True
+
+def test_batches(envIdx, batch_size, test_size):
+    batchIdx = 0
+    data_file = em.data_file_fpath(envIdx)
+    datapoints = em.load_data_points(data_file=data_file)
+    datapoints = datapoints[-test_size:]
+    for batchStartIdx in range(0, len(datapoints), batch_size):
+        batchEndIdx = batchStartIdx + batch_size
+        batch = datapoints[batchStartIdx:batchEndIdx]
+        x, lidarMeasurements, targets = format_data(batch)  # Goal is to have x be only the goal vector...
+        yield (batchIdx), x, lidarMeasurements, targets
+        batchIdx += 1
+    if batchStartIdx < len(datapoints):
+        yield (batchIdx), x, lidarMeasurements, targets
+        batchIdx += 1
 
 def load_datapoints(env_num, env_num_max, test_size):
     # TODO: Make it load test size with a fraction or something
@@ -131,63 +167,58 @@ def main():
     # Train Policy
     losses = []
     test_losses = []
+
+    # Get initial test_loss point
+    network.eval()
+    with t.no_grad():
+        curr_test_loss=0
+        for iterInfo, x, obs, true in test_batches(0, batch_size, test_size):
+            batchIdx = iterInfo
+            # Calculate test_loss
+            predictions = network.forward(x, obs)
+            test_loss = loss_fun(predictions, true)
+            curr_test_loss += test_loss.to('cpu').detach()
+        test_losses.append(test_loss)
+    network.train()
+    optim.zero_grad()
+
     for e in tqdm(range(epoch, epochs)):
-        all_data_loaded=False
-        leftover_datapoints = []
-        counter=0
-        while not all_data_loaded:
-            # Get Batch Data
-            loaded_datapoints, counter, all_data_loaded = load_datapoints(counter, env_num_max, test_size)
-            loaded_datapoints = loaded_datapoints+leftover_datapoints
+        for iterInfo, x, obs, true in batches(env_num_max, batch_size, test_size, starting_env_num=0):
+            envIdx, batchIdx, newEnvFlag = iterInfo
+            # Calculate Loss
+            predictions = network.forward(x, obs)
+            loss = loss_fun(predictions, true)
+            losses.append(loss)
 
-            # Loop Through Batches
-            for i in range(0, len(loaded_datapoints), batch_size):
-                batch = loaded_datapoints[i:i+batch_size]
-                x, obs, true = format_data(batch)  # Goal is to have x be only the goal vector...
+            # Step Parameters
+            loss.backward()
+            optim.step()
 
-                # Calculate Loss
-                predictions = network.forward(x, obs)
-                loss = loss_fun(predictions, true)
-                losses.append(loss)
+            # Reset Gradients in Optimizer
+            optim.zero_grad()
 
-                # Step Parameters
-                loss.backward()
-                optim.step()
-
-                # Reset Gradients in Optimizer
+            if newEnvFlag:
+                network.eval()
+                with t.no_grad():
+                    curr_test_loss=0
+                    for iterInfo, x, obs, true in test_batches(envIdx-1, batch_size, test_size):
+                        batchIdx = iterInfo
+                        # Calculate test_loss
+                        predictions = network.forward(x, obs)
+                        test_loss = loss_fun(predictions, true)
+                        curr_test_loss += test_loss.to('cpu').detach()
+                    test_losses.append(test_loss)
+                network.train()
                 optim.zero_grad()
 
-            network.eval()
-            with t.no_grad():
-                curr_test_loss=0
-                num_batches = 0
-                all_data_loaded=False
-                leftover_datapoints = []
-                # Get Batch Data
-                loaded_datapoints, all_data_loaded = load_test_datapoints(counter, env_num_max, test_size)
-                loaded_datapoints = loaded_datapoints+leftover_datapoints
-
-                # Loop Through Batches
-                for i in range(0, len(loaded_datapoints), batch_size):
-                    num_batches += 1
-                    batch = loaded_datapoints[i:i+batch_size]
-                    x, z, true = format_data(batch)
-
-                    # Calculate test_loss
-                    predictions = network.forward(x, z)
-                    test_loss = loss_fun(predictions, true)
-                    curr_test_loss += test_loss.to('cpu').detach()
-                    test_losses.append(test_loss)
-            network.train()
-
-            # Log Data
-            if e % freq == 0:
-                t.save({
-                    'epoch': e+1,
-                    'network_params': network.state_dict(),
-                    'optimizer_state': optim.state_dict(),
-                    'loss': curr_test_loss / num_batches,
-                    }, model_path)
+                # Log Data
+                if e % freq == 0:
+                    t.save({
+                        'epoch': e+1,
+                        'network_params': network.state_dict(),
+                        'optimizer_state': optim.state_dict(),
+                        'loss': curr_test_loss / (batchIdx+1),
+                        }, model_path)
     losses = np.array([l.to('cpu').detach() for l in losses])
     plt.plot(losses)
     plt.show()
@@ -195,7 +226,9 @@ def main():
     plt.plot(test_losses)
     plt.show()
 
-    test_loss_file = f'./models/model_perfs/test_loss{run_num}.dat'
+    test_loss_dir = f'./models/model_perfs'
+    os.makedirs(test_loss_dir, exist_ok=True)
+    test_loss_file = f'{test_loss_dir}/test_loss{run_num}.dat'
     save_loss_data(test_losses, test_loss_file)
 
 if __name__ == "__main__":
