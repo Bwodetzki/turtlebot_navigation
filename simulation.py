@@ -83,10 +83,10 @@ def create_box(position, dimensions, angles=[0, 0, 0], mass=0):
 
 def create_waypoint(position, radius, color=[1, 0, 0, 1]):
     waypoint = p.createVisualShape(p.GEOM_SPHERE, radius=radius, rgbaColor=color)
-    p.createMultiBody(baseMass=0,
+    obj_id = p.createMultiBody(baseMass=0,
                       basePosition=position,
                       baseVisualShapeIndex=waypoint)
-    return waypoint
+    return obj_id
 
 def initLidar(lidarDist: float = 1, lidarAngle: float = 2*np.pi, numMeasurements: int = 360):
     global lidar

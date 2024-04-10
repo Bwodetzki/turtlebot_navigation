@@ -23,6 +23,9 @@ def to_body_frame(pos, target, angle):
     vector = target - pos
     return rot_mat(angle)@vector
 
+def to_inertial_frame(pos, vector, angle):
+    return pos + rot_mat(-angle)@vector
+
 def save_loss_data(data, filename):
     with open(filename, 'wb') as f:
         pickle.dump(data, f)

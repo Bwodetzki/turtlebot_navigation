@@ -5,7 +5,7 @@ import pybullet as p
 import turtlebot_controller as c
 from pathlib import Path
 from network import PlanningNetwork
-from train import to_body_frame
+from train import to_body_frame, to_inertial_frame
 import simulation as sim
 import env_generator as eg
 import env_manager as em
@@ -33,23 +33,27 @@ def default_path_following(obs, path, node, speed=20, eps=1e-1):
     leftWheelVelocity, rightWheelVelocity = c.controller_v2(target, sim.turtle, max_vel=speed, a=3.5, eps=eps)
     return leftWheelVelocity, rightWheelVelocity, node
 
-def fast_planning(obs, goal, net, waypoint_id, speed=20, eps=1e-1, draw_waypoint=True, height=0.25, radius=0.25/2):
+def fast_planning(obs, goal, net, waypoint_id, speed=20, delay=0.05, eps=1e-1, draw_waypoint=True, height=0.25, radius=0.25/2):
+    time.sleep(delay)
     # Format Data
     curr_pos, curr_angle, measurements = obs
-    goal_vec = to_body_frame(t.tensor(curr_pos), t.tensor(goal), t.tensor(curr_angle))
+    goal_vec = to_body_frame(t.tensor(curr_pos[:2]), t.tensor(goal[:2].astype(np.float32)), t.tensor(curr_angle))
 
     if t.linalg.norm(goal_vec) < eps:
-        return 0, 0
+        return 0, 0, waypoint_id
 
     # Get waypoint
-    waypoint = net(goal_vec, t.tensor(measurements))
+    with t.no_grad():
+        waypoint = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
+    waypoint = to_inertial_frame(t.tensor(curr_pos[:2]), waypoint, t.tensor(curr_angle))
 
     # Plot Waypoint
-    p.removeBody(waypoint_id)
-    waypoint_id = sim.create_waypoint(t.concatenate((waypoint, [height])), radius, color=[1, 0, 1, 1])
+    if draw_waypoint:
+        p.removeBody(waypoint_id)
+        waypoint_id = sim.create_waypoint(t.concatenate((waypoint, t.tensor([height]))), radius, color=[1, 0, 1, 1])
 
     # Control to Waypoint
-    leftWheelVelocity, rightWheelVelocity = c.controller_v2(waypoint, sim.turtle, max_vel=speed, a=3.5, eps=eps)
+    leftWheelVelocity, rightWheelVelocity = c.controller_v2(waypoint.to('cpu').detach(), sim.turtle, max_vel=speed, a=1, eps=eps)
     return leftWheelVelocity, rightWheelVelocity, waypoint_id
 
 def slow_planning():
@@ -123,6 +127,7 @@ def main(args):
     sim.initLidar(lidar_params['lidarDist'], lidar_params['lidarAngle'], lidar_params['numMeasurements'])
 
     # Loop
+    i=0
     while True:
         ## Recieve Data
         # There may be something funky with the orientation data. 
@@ -135,6 +140,8 @@ def main(args):
         ## Controller Logic
         if run is not None:  # Use network
             if corn==0:
+                if i==5:
+                    print('here')
                 leftWheelVelocity, rightWheelVelocity, waypoint_id = fast_planning(obs, 
                                                                                 goal, 
                                                                                 net, 
@@ -149,6 +156,7 @@ def main(args):
                                                                         path,
                                                                         node,
                                                                         speed=speed,
+                                                                        delay=0.1,
                                                                         eps=eps)
         ## Sim Logic
         # Update Turtle Bot
@@ -160,10 +168,11 @@ def main(args):
             time.sleep(2)
             node = 0
             p.resetBasePositionAndOrientation(turtle, turtle_ops['pos'], turtle_ops['orn'])
+        i+=1
 
 if __name__=='__main__':
     parser = arg.ArgumentParser()
-    parser.add_argument('--run', type=int, default=None, help="The run of the model to be loaded, use None for no model")
+    parser.add_argument('--run', type=int, default=1, help="The run of the model to be loaded, use None for no model")
     parser.add_argument('--env', type=int, default=250, help="The environment number to test the turtlebot in, use None to generate one")
     parser.add_argument('--path', type=int, default=0, help="The path in the environment, use None to generate one")
     parser.add_argument('--corn', type=int, default=0, help="int(0, 1) The controller to be used, if not used default controller is used")
