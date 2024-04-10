@@ -183,7 +183,7 @@ def main():
     optim.zero_grad()
 
     for e in tqdm(range(epoch, epochs)):
-        for iterInfo, x, obs, true in batches(env_num_max, batch_size, test_size, starting_env_num=0):
+        for iterInfo, x, obs, true in tqdm(batches(env_num_max, batch_size, test_size, starting_env_num=0)):
             envIdx, batchIdx, newEnvFlag = iterInfo
             # Calculate Loss
             predictions = network.forward(x, obs)
@@ -210,15 +210,14 @@ def main():
                     test_losses.append(test_loss)
                 network.train()
                 optim.zero_grad()
-
                 # Log Data
-                if e % freq == 0:
-                    t.save({
-                        'epoch': e+1,
-                        'network_params': network.state_dict(),
-                        'optimizer_state': optim.state_dict(),
-                        'loss': curr_test_loss / (batchIdx+1),
-                        }, model_path)
+                t.save({
+                    'epoch': e+1,
+                    'batch_index' : batchIdx,
+                    'network_params': network.state_dict(),
+                    'optimizer_state': optim.state_dict(),
+                    'loss': curr_test_loss / (batchIdx+1),
+                    }, model_path)
     losses = np.array([l.to('cpu').detach() for l in losses])
     plt.plot(losses)
     plt.show()
