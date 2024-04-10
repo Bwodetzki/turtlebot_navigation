@@ -28,10 +28,14 @@ def format_data(data_points):
     inputs:
         list of datapoints
     outputs:
-        x: tensor containing (angle, curr_pos, target)
+        x: tensor containing (angle, curr_pos, goal)
         z: tensor of lidar measurements
         true: tensor of RRT* sampled point
     '''
+    # If network not learning well, try:
+    # Possibly Normalize positions
+    # Rotate lidar data through pre-processing
+    # Shuffle data to get rid of correlation
     x = []
     z = []
     true = []
@@ -52,8 +56,8 @@ def main():
     # Definitions
     epochs = 10
     batch_size = 20
-    learning_rate = 0
-    env_num_max = 2
+    learning_rate = 1e-3
+    env_num_max = 585
     freq = 1
     test_size = 100
     run_num=1
@@ -99,10 +103,10 @@ def main():
             # Loop Through Batches
             for i in range(0, len(loaded_datapoints), batch_size):
                 batch = loaded_datapoints[i:i+batch_size]
-                x, z, true = format_data(batch)
+                x, obs, true = format_data(batch)
 
                 # Calculate Loss
-                predictions = network.forward(x, z)
+                predictions = network.forward(x, obs)
                 loss = loss_fun(predictions, true)
                 losses.append(loss)
 
