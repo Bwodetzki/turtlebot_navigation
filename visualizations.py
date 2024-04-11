@@ -2,6 +2,7 @@ import env_generator as eg
 import env_manager as em
 import collision_checker as cc
 import numpy as np
+import simulation as sim
 import matplotlib.pyplot as plt
 from pathlib import Path
 import time
@@ -117,7 +118,19 @@ def upsampling_demo():
     plt.pause(0.5)
     plt.show()
 
-def main():
+def turtlebot_anim():
+    sim.create_sim()
+
+    speed = np.array([1., 3.])
+    i = 0
+    while 1:
+        leftWheelVelocity, rightWheelVelocity = speed
+        sim.step_sim(leftWheelVelocity, rightWheelVelocity)
+
+        i+=1e-10
+        speed = speed + speed*i
+
+def environment_plotter():
     env_nums = [2]
     path_nums = [3, 4]
 
@@ -146,4 +159,4 @@ def main():
             plt.show()
 
 if __name__=="__main__":
-    upsampling_demo()
+    turtlebot_anim()
