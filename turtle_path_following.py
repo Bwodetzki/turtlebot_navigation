@@ -151,8 +151,8 @@ def main(args):
                                                                                 goal, 
                                                                                 waypoint,
                                                                                 waypoint_id, 
-                                                                                speed=speed, 
-                                                                                eps=1e-1, 
+                                                                                speed=speed,
+                                                                                eps=eps, 
                                                                                 draw_waypoint=draw_waypoint)
             else: # corn ==1
                 leftWheelVelocity, rightWheelVelocity, waypoint_id = slow_planning()  # not implemented YET
@@ -161,7 +161,6 @@ def main(args):
                                                                         path,
                                                                         node,
                                                                         speed=speed,
-                                                                        delay=0.1,
                                                                         eps=eps)
         ## Sim Logic
         # Update Turtle Bot
@@ -178,9 +177,9 @@ def main(args):
 
 if __name__=='__main__':
     parser = arg.ArgumentParser()
-    parser.add_argument('--run', type=int, default=1, help="The run of the model to be loaded, use None for no model")
-    parser.add_argument('--env', type=int, default=250, help="The environment number to test the turtlebot in, use None to generate one")
-    parser.add_argument('--path', type=int, default=0, help="The path in the environment, use None to generate one")
+    parser.add_argument('--run', type=int, default=2, help="The run of the model to be loaded, use None for no model")
+    parser.add_argument('--env', type=int, default=0, help="The environment number to test the turtlebot in, use None to generate one")
+    parser.add_argument('--path', type=int, default=3, help="The path in the environment, use None to generate one")
     parser.add_argument('--corn', type=int, default=0, help="int(0, 1) The controller to be used, if not used default controller is used")
     args = parser.parse_args()
     main(args)

@@ -122,15 +122,15 @@ def format_data(data_points):
 
 def main():
     # Definitions
-    epochs = 3
+    epochs = 2
     batch_size = 20
     learning_rate = 1e-3
-    env_num_max = 10
+    env_num_max = 550
     freq = 1
     test_size = 100
-    run_num = 1
+    run_num = 2
     model_path = f"./models/run{run_num}"
-    load_policy=False
+    load_policy=True
 
     # Torch Definitions
     t.set_default_device(DEVICE)
@@ -212,7 +212,7 @@ def main():
                 optim.zero_grad()
                 # Log Data
                 t.save({
-                    'epoch': e+1,
+                    'epoch': e,
                     'batch_index' : batchIdx,
                     'network_params': network.state_dict(),
                     'optimizer_state': optim.state_dict(),
