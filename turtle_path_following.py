@@ -33,19 +33,13 @@ def default_path_following(obs, path, node, speed=20, eps=1e-1):
     leftWheelVelocity, rightWheelVelocity = c.controller_v2(target, sim.turtle, max_vel=speed, a=3.5, eps=eps)
     return leftWheelVelocity, rightWheelVelocity, node
 
-def fast_planning(obs, goal, net, waypoint_id, speed=20, delay=0.05, eps=1e-1, draw_waypoint=True, height=0.25, radius=0.25/2):
-    time.sleep(delay)
+def fast_planning(obs, goal, waypoint, waypoint_id, speed=20, eps=1e-1, draw_waypoint=True, height=0.25, radius=0.25/2):
     # Format Data
     curr_pos, curr_angle, measurements = obs
     goal_vec = to_body_frame(t.tensor(curr_pos[:2]), t.tensor(goal[:2].astype(np.float32)), t.tensor(curr_angle))
 
     if t.linalg.norm(goal_vec) < eps:
         return 0, 0, waypoint_id
-
-    # Get waypoint
-    with t.no_grad():
-        waypoint = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
-    waypoint = to_inertial_frame(t.tensor(curr_pos[:2]), waypoint, t.tensor(curr_angle))
 
     # Plot Waypoint
     if draw_waypoint:
@@ -64,7 +58,7 @@ def main(args):
     env_num = args.env
     path_num = args.path
     corn = args.corn
-    speed = 20
+    speed = 30
     eps = 1e-1
 
     turtle = sim.create_sim()
@@ -128,6 +122,8 @@ def main(args):
 
     # Loop
     i=0
+    waypointGenerationPeriod = 2 # seconds
+    prevWaypointTime = -1*waypointGenerationPeriod
     while True:
         ## Recieve Data
         # There may be something funky with the orientation data. 
@@ -140,15 +136,24 @@ def main(args):
         ## Controller Logic
         if run is not None:  # Use network
             if corn==0:
-                if i==5:
-                    print('here')
+                now = time.time()
+                if now - prevWaypointTime >= waypointGenerationPeriod:
+                    prevWaypointTime = now
+                    # Get waypoint
+                    goal_vec = to_body_frame(t.tensor(curr_pos[:2]), t.tensor(goal[:2].astype(np.float32)), t.tensor(curr_angle))
+                    with t.no_grad():
+                        waypoint = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
+                    waypoint = to_inertial_frame(t.tensor(curr_pos[:2]), waypoint, t.tensor(curr_angle))
+                    draw_waypoint=True
+                else:
+                    draw_waypoint=False
                 leftWheelVelocity, rightWheelVelocity, waypoint_id = fast_planning(obs, 
                                                                                 goal, 
-                                                                                net, 
+                                                                                waypoint,
                                                                                 waypoint_id, 
-                                                                                speed=20, 
+                                                                                speed=speed, 
                                                                                 eps=1e-1, 
-                                                                                draw_waypoint=True)
+                                                                                draw_waypoint=draw_waypoint)
             else: # corn ==1
                 leftWheelVelocity, rightWheelVelocity, waypoint_id = slow_planning()  # not implemented YET
         else:  # Use RRT*
