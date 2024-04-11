@@ -268,8 +268,9 @@ def getTurtleInfo():
 
 def main():
     import env_manager as em
-    boundaryFile = './envData/env0/boundary.dat'
-    obstaclesFile = './envData/env0/obstacles.dat'
+    envIdx = 1
+    boundaryFile = f'./envData/env{envIdx}/boundary.dat'
+    obstaclesFile = f'./envData/env{envIdx}/obstacles.dat'
     create_sim()
     em.load_env(boundaryFile, obstaclesFile)
     # create_box([3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
