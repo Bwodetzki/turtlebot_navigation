@@ -79,13 +79,14 @@ def save_env(boundary, obstacles, env_idx):
     with open(obstacles_file, 'wb') as obstacles_fp:
         pickle.dump(obstacles, obstacles_fp)
 
-def load_env(boundary_file, obstacles_file):
+def load_env(boundary_file, obstacles_file, use_sim=True):
     with open(str(boundary_file), 'rb') as boundary_fp:
         boundary = pickle.load(boundary_fp)
     with open(str(obstacles_file), 'rb') as obstacles_fp:
         obstacles = pickle.load(obstacles_fp)
-    load_boundary(boundary)
-    load_obstacles(obstacles)
+    if use_sim:
+        load_boundary(boundary)
+        load_obstacles(obstacles)
     return boundary, obstacles
 
 def save_start_goal(start, goal, angle, env_idx, path_idx):

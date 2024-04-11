@@ -187,6 +187,11 @@ def main():
             envIdx, batchIdx, newEnvFlag = iterInfo
             # Calculate Loss
             predictions = network.forward(x, obs)
+
+            # Converts to unit vector
+            # predictions = predictions / t.linalg.norm(predictions, dim=1).reshape(-1,1)  # Unit vectors
+            # true = true / t.linalg.norm(true, dim=1).reshape(-1,1)
+
             loss = loss_fun(predictions, true)
             losses.append(loss)
 
@@ -205,6 +210,11 @@ def main():
                         batchIdx = iterInfo
                         # Calculate test_loss
                         predictions = network.forward(x, obs)
+
+                        # Converts to unit vector
+                        # predictions = predictions / t.linalg.norm(predictions, dim=1).reshape(-1,1)  # Unit vectors
+                        # true = true / t.linalg.norm(true, dim=1).reshape(-1,1)
+
                         test_loss = loss_fun(predictions, true)
                         curr_test_loss += test_loss.to('cpu').detach()
                     test_losses.append(test_loss)

@@ -45,6 +45,8 @@ def fast_planning(obs, goal, net, waypoint_id, speed=20, delay=0.05, eps=1e-1, d
     # Get waypoint
     with t.no_grad():
         waypoint = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
+    # Converts to unit vector
+    # waypoint = waypoint/t.linalg.norm(waypoint)
     waypoint = to_inertial_frame(t.tensor(curr_pos[:2]), waypoint, t.tensor(curr_angle))
 
     # Plot Waypoint

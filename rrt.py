@@ -43,7 +43,7 @@ class RRT():
     Class for RRT Planning
     """
 
-    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5, downsample_size=3):
+    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5, upsample_size=3):
         """
         Sets algorithm parameters
 
@@ -69,7 +69,7 @@ class RRT():
 
         self.goalfound = False
         self.solutionSet = set()
-        self.downsample_size = downsample_size
+        self.upsample_size = upsample_size
 
     def planning(self, animation=False):
         """
@@ -86,7 +86,7 @@ class RRT():
         direct_path_valid, _ = self.steerTo(self.end, self.start)
         if direct_path_valid:
             print(f'Direct path successful. Skipping planning...')
-            path = self.downsample([self.end.state, self.start.state])
+            path = self.upsample([self.end.state, self.start.state])
             return path
         else:
             print(f'Direct path unsuccessful. Beginning planning...')
@@ -283,7 +283,7 @@ class RRT():
         return pathLen
 
 
-    def gen_final_course(self, goalind, use_lvc=True, use_downsample=True):
+    def gen_final_course(self, goalind, use_lvc=True, use_upsample=True):
         """
         Traverses up the tree to find the path from start to goal
 
@@ -306,8 +306,8 @@ class RRT():
         path.append(self.start.state)
         path_node_list.append(self.start)
 
-        if use_downsample:
-            path, path_node_list = self.downsample(path, node_list=True)
+        if use_upsample:
+            path, path_node_list = self.upsample(path, node_list=True)
         
         if use_lvc:
             new_path_node_list = self.lvc(path_node_list)
@@ -324,14 +324,14 @@ class RRT():
                 # delete elements from (0+1, i]
                 path_node_list = [path_node_list[idx] for idx in range(len(path_node_list)) if (idx == 0) or (idx >= i)]
                 path = [node.state for node in path_node_list]
-                _, path_node_list = self.downsample(path, node_list=True)
+                _, path_node_list = self.upsample(path, node_list=True)
                 break
             
         upper_list = self.lvc(path_node_list[1:])
         path_node_list = [path_node_list[0]] + upper_list
         return path_node_list
     
-    def downsample(self, path, node_list=False):
+    def upsample(self, path, node_list=False):
         # plt.clf()
         n_path = np.array(path)
         # plt.plot(n_path[:, 0], n_path[:, 1])
@@ -339,7 +339,7 @@ class RRT():
         for i in range(len(path)-1):
             vector = n_path[i+1] - n_path[i]
             length = np.linalg.norm(vector)
-            num_subsamples = int(length//self.downsample_size)
+            num_subsamples = int(length//self.upsample_size)
             subsample_vec_mag = length/(num_subsamples+1)
 
             j = 0
@@ -483,11 +483,6 @@ class RRT():
                         node.state[1], self.nodeList[node.parent].state[1]], "-g")
                     circle = mpatches.Circle((node.state[0], node.state[1]), self.turtle_radius, color='b')
                     plt.gca().add_patch(circle)
-                    # elif self.geom == 'rectangle':
-                    #     rect = mpatches.Rectangle((node.state[0]-3/2, node.state[1]-3/4), 3, 3/2, fill=True, color="b", linewidth=0.1)
-                    #     tr = mpl.transforms.Affine2D().rotate_deg_around(node.state[0], node.state[1], np.rad2deg(node.state[2])) + plt.gca().transData
-                    #     rect.set_transform(tr)
-                    #     plt.gca().add_patch(rect)
 
 
         if self.goalfound:
@@ -539,12 +534,10 @@ def rrt_star(boundary, obstacles, start, goal, RRTs_params):
               dof=2, 
               maxIter=RRTs_params['max_iters'],
               maxReplan=RRTs_params['max_replan'],
-              downsample_size=RRTs_params['downsample_size'])
+              upsample_size=RRTs_params['upsample_size'])
     path = rrt.planning(animation=False)
     return path
     
-
-
 def main():
     print("Starting planning algorithm '%s' with '%s' robot geometry"%('rrtstar', 'circle'))
     starttime = time.time()
