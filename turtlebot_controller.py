@@ -95,7 +95,12 @@ def controller_v2(target_pos, turtlebot_id, a=5, max_vel=10, eps=1e-2):
     leftWheelVelocity=0
     rightWheelVelocity=0
 
-    orn_error = angle_diff(curr_orn, desired_orn)
+    # orn_error = angle_diff(curr_orn, desired_orn)
+    orn_error = desired_orn - curr_orn
+    if orn_error > np.pi:
+        orn_error -= 2*np.pi
+    elif orn_error < -np.pi:
+        orn_error += 2*np.pi
     
     leftWheelVelocity = max_vel*(func(abs(orn_error)) - (1 - func(abs(orn_error)))*np.sign(orn_error))
     rightWheelVelocity = max_vel*(func(abs(orn_error)) + (1 - func(abs(orn_error)))*np.sign(orn_error))
