@@ -165,6 +165,7 @@ def main(args):
                                                                         eps=eps)
         ## Sim Logic
         # Update Turtle Bot
+        sim.keyboard_control(forward=0, turn=0, speed=speed)
         sim.step_sim(leftWheelVelocity, rightWheelVelocity)
 
         # Restart Sim if at Goal
