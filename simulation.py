@@ -268,16 +268,16 @@ def getTurtleInfo():
 
 def main():
     import env_manager as em
-    boundaryFile = './envData/env0/env_boundary.dat'
-    obstaclesFile = './envData/env0/env_obstacles.dat'
+    boundaryFile = './envData/env0/boundary.dat'
+    obstaclesFile = './envData/env0/obstacles.dat'
     create_sim()
     em.load_env(boundaryFile, obstaclesFile)
-    create_box([3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
-    create_box([-3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
-    create_box([3,-3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
-    create_box([-3,-3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
-    create_waypoint([1, 0, 0.25], radius=1/8)
-    initLidar(lidarDist=10, lidarAngle=2*np.pi, numMeasurements=36)
+    # create_box([3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
+    # create_box([-3,3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
+    # create_box([3,-3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
+    # create_box([-3,-3,1.5], dimensions=[3,3,3], angles=[0,0,0], mass=0)
+    # create_waypoint([1, 0, 0.25], radius=1/8)
+    initLidar(lidarDist=50, lidarAngle=2*np.pi, numMeasurements=36)
     forward=0
     turn=0
     startTime = time.time()
