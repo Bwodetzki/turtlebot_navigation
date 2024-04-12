@@ -47,7 +47,7 @@ def fast_planning(obs, goal, waypoint, waypoint_id, speed=20, eps=1e-1, draw_way
         waypoint_id = sim.create_waypoint(t.concatenate((waypoint, t.tensor([height]))), radius, color=[1, 0, 1, 1])
 
     # Control to Waypoint
-    leftWheelVelocity, rightWheelVelocity = c.controller_v2(waypoint.to('cpu').detach(), sim.turtle, max_vel=speed, a=1, eps=eps)
+    leftWheelVelocity, rightWheelVelocity = c.controller_v2(waypoint.to('cpu').detach(), sim.turtle, max_vel=speed, a=0.5, eps=eps)
     return leftWheelVelocity, rightWheelVelocity, waypoint_id
 
 def slow_planning():
@@ -100,7 +100,7 @@ def main(args):
 
     if run is not None:
         net = PlanningNetwork()
-        model_path = model_path = f"./models/run{run}"
+        model_path = model_path = f"./good_models/run{run}"
         data = t.load(model_path)
 
         loss = data['loss']
@@ -122,7 +122,7 @@ def main(args):
 
     # Loop
     i=0
-    waypointGenerationPeriod = 2 # seconds
+    waypointGenerationPeriod = 0.1 # seconds
     prevWaypointTime = -1*waypointGenerationPeriod
     while True:
         ## Recieve Data
@@ -143,6 +143,7 @@ def main(args):
                     goal_vec = to_body_frame(t.tensor(curr_pos[:2]), t.tensor(goal[:2].astype(np.float32)), t.tensor(curr_angle))
                     with t.no_grad():
                         waypoint = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
+                    waypoint = waypoint/t.linalg.norm(waypoint)
                     waypoint = to_inertial_frame(t.tensor(curr_pos[:2]), waypoint, t.tensor(curr_angle))
                     draw_waypoint=True
                 else:
@@ -177,9 +178,9 @@ def main(args):
 
 if __name__=='__main__':
     parser = arg.ArgumentParser()
-    parser.add_argument('--run', type=int, default=2, help="The run of the model to be loaded, use None for no model")
-    parser.add_argument('--env', type=int, default=0, help="The environment number to test the turtlebot in, use None to generate one")
-    parser.add_argument('--path', type=int, default=3, help="The path in the environment, use None to generate one")
-    parser.add_argument('--corn', type=int, default=0, help="int(0, 1) The controller to be used, if not used default controller is used")
+    parser.add_argument('--run', type=int, default=5, help="The run of the model to be loaded, use None for no model")
+    parser.add_argument('--env', type=int, default=None, help="The environment number to test the turtlebot in, use None to generate one")
+    parser.add_argument('--path', type=int, default=None, help="The path in the environment, use None to generate one")
+    parser.add_argument('--corn', type=int, default=0, help="UNUSED: int(0, 1) The controller to be used, if not used default controller is used")
     args = parser.parse_args()
     main(args)
