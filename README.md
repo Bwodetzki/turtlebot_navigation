@@ -8,18 +8,6 @@ Use requirements.txt for version control. \
 ## Demos of Files
 Running turtle_path_following.py with the default parameters will generate a random environment and a random path and use a trained model to attempt to reach the goal. The path generation takes a long time.
 
-## TODO:
-1. Decide what environment we want to use and implement the environment in pybullet. 
-    - I see two options for a base environment for this class, one is a bunch of randomly generated rectangles as obstacles, and the other is a bunch of randomly generated tables and chairs and other more specific items. Both provide trainable environment, the former would be easier, the latter would allow us to develop and test the algorithm for a more real worls environment (I think of a roomba)
-2. Develop RRT* algorithm
-3. Develop simple controller so bot can track trajectory
-4. Write midterm report (Due 3/18)
-    - Am I missing something?
-5. Implement autonomy
-6. Final Presentation (Due 4/11)
-
-
-
 ## Useful Resources
 The turtlbot URDF and orginal test code was taken from this repo: https://github.com/erwincoumans/pybullet_robots?tab=readme-ov-file
 
