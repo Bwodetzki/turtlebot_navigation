@@ -178,7 +178,7 @@ def main(args):
 
 if __name__=='__main__':
     parser = arg.ArgumentParser()
-    parser.add_argument('--run', type=int, default=5, help="The run of the model to be loaded, use None for no model")
+    parser.add_argument('--run', type=int, default=None, help="The run of the model to be loaded, use None for no model")
     parser.add_argument('--env', type=int, default=None, help="The environment number to test the turtlebot in, use None to generate one")
     parser.add_argument('--path', type=int, default=None, help="The path in the environment, use None to generate one")
     parser.add_argument('--corn', type=int, default=0, help="UNUSED: int(0, 1) The controller to be used, if not used default controller is used")
