@@ -101,7 +101,7 @@ def main(args):
     if run is not None:
         net = PlanningNetwork()
         model_path = model_path = f"./good_models/run{run}"
-        data = t.load(model_path)
+        data = t.load(model_path, map_location=DEVICE)
 
         loss = data['loss']
         print(f'Validation loss of model is {loss:0.4f}')
