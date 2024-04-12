@@ -4,7 +4,9 @@ Navigation algorithms for turtlebot using pybullet. RRT* and NN based navigation
 ## Quick Start
 Python 3.11.6 is used. \
 Use requirements.txt for version control. \
-turtlebot_demo is a neat demo of the turtlebot (go figure)
+
+## Demos of Files
+Running turtle_path_following.py with the default parameters will generate a random environment and a random path and use a trained model to attempt to reach the goal. The path generation takes a long time.
 
 ## TODO:
 1. Decide what environment we want to use and implement the environment in pybullet. 
@@ -14,7 +16,7 @@ turtlebot_demo is a neat demo of the turtlebot (go figure)
 4. Write midterm report (Due 3/18)
     - Am I missing something?
 5. Implement autonomy
-6. Final report (Due 4/11)
+6. Final Presentation (Due 4/11)
 
 
 
@@ -24,5 +26,3 @@ The turtlbot URDF and orginal test code was taken from this repo: https://github
 The orginal pybullet repo is also helpful for understanding how pybullet works (the link is the quickstart guide): https://github.com/bulletphysics/bullet3/blob/master/docs/pybullet_quickstart_guide/PyBulletQuickstartGuide.md.html
 
 This more in depth guide is helpful in understanding the basics: https://docs.google.com/document/d/10sXEhzFRSnvFcl3XxNGhnD4N2SedqwdAvK3dsihxVUA/edit
-
-We should find some papers that go over algorithms similar to what we want to replicate in this project.
