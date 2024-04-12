@@ -132,7 +132,11 @@ def turtlebot_anim():
 
 def environment_plotter():
     env_nums = [2]
-    path_nums = [3, 4]
+    path_nums = [3]
+
+    use_sim = True
+    if use_sim:
+        sim.create_sim(load_turtle=False)
 
     for env_num in env_nums:
         for path_num in path_nums:
@@ -142,21 +146,23 @@ def environment_plotter():
             obs_file = env_path / f'obstacles.dat'
             boundary_file = env_path / f'boundary.dat'
 
-            boundary, obstacles = em.load_env(boundary_file, obs_file, use_sim=False)
+            boundary, obstacles = em.load_env(boundary_file, obs_file, use_sim=use_sim)
+            while(1):
+                sim.keyboard_control(10, 10, 10)
 
             # Load Path
-            path_file = env_path / f'path{path_num}' / 'path.dat'
-            path, angle = em.load_path(path_file)
+            # path_file = env_path / f'path{path_num}' / 'path.dat'
+            # path, angle = em.load_path(path_file)
 
             # Plot
             fig, ax = plt.subplots()
             em.plot_boundary(boundary, ax=ax)
             for obstacle in obstacles:
                     em.plot_obstacle(obstacle, ax=ax)
-            ax.plot(path[:, 0], path[:, 1], 'ro-')
+            # ax.plot(path[:, 0], path[:, 1], 'ro-')
 
-            ax.set_title(f'Env {env_num}, Path {path_num}')
+            # ax.set_title(f'Env {env_num}, Path {path_num}')
             plt.show()
 
 if __name__=="__main__":
-    turtlebot_anim()
+    environment_plotter()

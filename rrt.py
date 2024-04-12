@@ -534,7 +534,7 @@ def rrt_star(boundary, obstacles, start, goal, RRTs_params):
               dof=2, 
               maxIter=RRTs_params['max_iters'],
               maxReplan=RRTs_params['max_replan'],
-              upsample_size=RRTs_params['upsample_size'])
+              upsample_size=RRTs_params['downsample_size'])
     path = rrt.planning(animation=False)
     return path
     
