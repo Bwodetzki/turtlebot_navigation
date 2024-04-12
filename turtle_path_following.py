@@ -105,7 +105,7 @@ def main(args):
 
         loss = data['loss']
         print(f'Validation loss of model is {loss:0.4f}')
-        net.load_state_dict(data['network_params'])
+        net.load_state_dict(data['network_params']).to(DEVICE)
 
     # Initializations For Loop
     start = path[0]
