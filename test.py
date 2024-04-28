@@ -21,13 +21,19 @@ DEVICE = (
 )
 
 def RRT_star(boundary, obstacles, start, goal, RRTs_params):  # Change RRTS_params?
-    path = rrt_star(boundary, obstacles, start, goal, RRTs_params)
+    try:
+        path = rrt_star(boundary, obstacles, start, goal, RRTs_params)
+    except: 
+        path = None
     success = 1 if path is not None else 0 # May not return None
     return success, path
 
 def informed_sampling(boundary, obstacles, start, goal, RRTs_params, net):
-    path = neural_rrt(boundary, obstacles, start, goal, RRTs_params, net)
-    success = True if path is not None else None
+    try:
+        path = neural_rrt(boundary, obstacles, start, goal, RRTs_params, net)
+    except:
+        path = None
+    success = 1 if path is not None else 0
     return success, path
 
 def load_vars(env_num, path_num, params):
@@ -71,7 +77,7 @@ def generate_test_data(args):
     env_num = args.env
     path_num = args.path
     # corn = args.corn
-    num_its = 100 # CHANGEME
+    num_its = 2 # CHANGEME
 
     # env_num=None
     # path_num=None
@@ -92,7 +98,6 @@ def generate_test_data(args):
     RRT_star_data = []
     MPNET_data = []
     RNN_data = []
-
 
     change_env = False
     change_path = True
