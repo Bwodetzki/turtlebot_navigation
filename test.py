@@ -77,7 +77,7 @@ def generate_test_data(args):
     env_num = args.env
     path_num = args.path
     # corn = args.corn
-    num_its = 2 # CHANGEME
+    num_its = 100 # CHANGEME
 
     # env_num=None
     # path_num=None
@@ -165,10 +165,9 @@ def generate_test_data(args):
 
     # Save Data
     fname='test_data/data_100_random_all.pk'
-    with open(fname, 'wb') as f: # create file if needed
-        pass
     data_store = (success_percs, time_stats, data_list)
-    pickle.dump(data_store, fname)
+    with open(fname, 'wb') as f: # create file if needed
+        pickle.dump(data_store, f)
 
     return success_percs, time_stats
     
