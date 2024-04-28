@@ -157,7 +157,7 @@ def main(args):
                 if now - prevWaypointTime >= waypointGenerationPeriod:
                     prevWaypointTime = now
                     # Get waypoint
-                    goal_vec = to_body_frame(t.tensor(curr_pos[:2]), t.tensor(goal[:2].astype(np.float32)), t.tensor(curr_angle))
+                    goal_vec = to_body_frame(curr_pos[:2], t.tensor(goal[:2].astype(np.float32)), curr_angle)
                     with t.no_grad():
                         if rnn:
                             waypoint, hiddenState = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1), hiddenState)
@@ -199,7 +199,7 @@ def main(args):
 
 if __name__=='__main__':
     parser = arg.ArgumentParser()
-    parser.add_argument('--run', type=int, default=5, help="The run of the model to be loaded, use None for no model")
+    parser.add_argument('--run', type=int, default=None, help="The run of the model to be loaded, use None for no model")
     parser.add_argument('--env', type=int, default=None, help="The environment number to test the turtlebot in, use None to generate one")
     parser.add_argument('--path', type=int, default=None, help="The path in the environment, use None to generate one")
     parser.add_argument('--rnn', action="store_true")

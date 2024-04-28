@@ -10,6 +10,7 @@ import random
 import math
 import copy
 import numpy as np
+import torch as t
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import matplotlib as mpl
@@ -17,6 +18,9 @@ import time
 import collision_checker as cc
 import env_manager as em
 from functools import lru_cache
+import pybullet as p
+import simulation as sim
+import turtle_path_following as tpf
 
 
 def diff(v1, v2):
@@ -43,7 +47,7 @@ class RRT():
     Class for RRT Planning
     """
 
-    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5, upsample_size=3):
+    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5, upsample_size=3, net=None):
         """
         Sets algorithm parameters
 
@@ -70,6 +74,7 @@ class RRT():
         self.goalfound = False
         self.solutionSet = set()
         self.upsample_size = upsample_size
+        self.net = net
 
     def planning(self, animation=False):
         """
@@ -139,6 +144,134 @@ class RRT():
                 if break_flag:
                     break
 
+        return self.get_path_to_goal()
+    
+    def neural_planning(self, animation=False):
+        """
+        Implements the RTT (or RTT*) algorithm, following the pseudocode in the handout.
+        You should read and understand this function, but you don't have to change any of its code - just implement the 3 helper functions.
+
+        animation: flag for animation on or off
+        """
+
+        self.nodeList = [self.start]
+        break_flag=False
+        counter = 0  # Counts how many iters have passed since a solution has been found, breaks after 5!!
+
+        # Do not check for direct path?
+        direct_path_valid, _ = self.steerTo(self.end, self.start)
+        if direct_path_valid:
+            print(f'Direct path successful. Skipping planning...')
+            path = self.upsample([self.end.state, self.start.state])
+            return path
+        else:
+            print(f'Direct path unsuccessful. Beginning planning...')
+
+        failcount = 0
+        i = 0
+        while failcount < 11:
+            print(f'Neural Planning iteration: {i}')
+            rnd = self.neural_sampler() # Sample with NN # Needs to get most recently sampled node in Tree
+            nind = self.GetNearestListIndex(self.nodeList, rnd)
+
+            rnd_valid, rnd_cost = self.steerTo(rnd, self.nodeList[nind])
+
+            if self.goalfound == True:
+                    counter+=1
+                    if counter>=self.maxReplan:
+                        break_flag=True
+
+            if (rnd_valid):
+                newNode = copy.deepcopy(rnd)
+                newNode.parent = nind
+                newNode.cost = rnd_cost + self.nodeList[nind].cost
+
+                if self.alg == 'rrtstar':
+                    nearinds = self.find_near_nodes(newNode) # you'll implement this method
+                    newParent = self.choose_parent(newNode, nearinds) # you'll implement this method
+                else:
+                    newParent = None
+
+                # insert newNode into the tree
+                if newParent is not None:
+                    newNode.parent = newParent
+                    newNode.cost = dist(newNode.state, self.nodeList[newParent].state) + self.nodeList[newParent].cost
+                else:
+                    pass # nind is already set as newNode's parent
+                self.nodeList.append(newNode)
+                newNodeIndex = len(self.nodeList) - 1
+                self.nodeList[newNode.parent].children.add(newNodeIndex)
+
+                if self.alg == 'rrtstar':
+                    self.rewire(newNode, newNodeIndex, nearinds) # you'll implement this method
+
+                if self.is_near_goal(newNode):
+                    is_valid_sol, cost = self.steerTo(self.end, newNode)
+                    if is_valid_sol:
+                        self.solutionSet.add(newNodeIndex)
+                        self.goalfound = True
+
+                if animation:
+                    self.draw_graph(rnd.state)
+                
+                if break_flag:
+                    break
+
+                failcount = 0
+            else:
+                failcount+=1
+            i+=1
+        
+        if self.get_path_to_goal() is None:
+            break_flag=False
+            counter = 0
+            for i in range(self.maxIter):
+                print(f'Planning iteration: {i}')
+                rnd = self.generatesample()
+                nind = self.GetNearestListIndex(self.nodeList, rnd)
+
+                rnd_valid, rnd_cost = self.steerTo(rnd, self.nodeList[nind])
+
+                if self.goalfound == True:
+                        counter+=1
+                        if counter>=self.maxReplan:
+                            break_flag=True
+
+                if (rnd_valid):
+                    newNode = copy.deepcopy(rnd)
+                    newNode.parent = nind
+                    newNode.cost = rnd_cost + self.nodeList[nind].cost
+
+                    if self.alg == 'rrtstar':
+                        nearinds = self.find_near_nodes(newNode) # you'll implement this method
+                        newParent = self.choose_parent(newNode, nearinds) # you'll implement this method
+                    else:
+                        newParent = None
+
+                    # insert newNode into the tree
+                    if newParent is not None:
+                        newNode.parent = newParent
+                        newNode.cost = dist(newNode.state, self.nodeList[newParent].state) + self.nodeList[newParent].cost
+                    else:
+                        pass # nind is already set as newNode's parent
+                    self.nodeList.append(newNode)
+                    newNodeIndex = len(self.nodeList) - 1
+                    self.nodeList[newNode.parent].children.add(newNodeIndex)
+
+                    if self.alg == 'rrtstar':
+                        self.rewire(newNode, newNodeIndex, nearinds) # you'll implement this method
+
+                    if self.is_near_goal(newNode):
+                        is_valid_sol, cost = self.steerTo(self.end, newNode)
+                        if is_valid_sol:
+                            self.solutionSet.add(newNodeIndex)
+                            self.goalfound = True
+
+                    if animation:
+                        self.draw_graph(rnd.state)
+                    
+                    if break_flag:
+                        break
         return self.get_path_to_goal()
 
     def choose_parent(self, newNode, nearinds):
@@ -235,6 +368,61 @@ class RRT():
             while iters < max_iters:
                 # Generate Sample
                 sample = (2*np.random.rand(2)-1)*self.sampleArea
+                success = True
+
+                # Check if point is inside boundary and does not collide with any obstacles
+                if cc.is_inside_boundary(self.boundary, sample, self.turtle_radius):
+                    for obstacle in self.obstacles:
+                        if cc.rectangle_col_checker(obstacle, sample, self.turtle_radius):
+                            success = False
+                            break
+                else:
+                    success = False
+                if success:
+                    break
+                iters+=1
+            if (iters >= max_iters):  # Did not converge to the start position in the given # of iterations
+                raise Exception("RRT Failed to Sample Points")
+
+            rnd = Node(sample)
+        else:
+            rnd = self.end
+
+        return rnd
+
+    def neural_sampler(self, max_iters=1000):
+        """
+        Randomly generates a sample, to be used as a new node.
+        This sample may be invalid - if so, call generatesample() again.
+
+        You will need to modify this function for question 3 (if self.geom == 'rectangle')
+
+        returns: random c-space vector
+        """
+
+        if random.randint(0, 100) > 70:# self.goalSampleRate:
+            # Collect Lidar
+            prev_node = self.nodeList[-2] if len(self.nodeList) > 1 else self.nodeList[-1]
+            curr_node = self.nodeList[-1]
+            # curr_pos, curr_orn = p.getBasePositionAndOrientation(turtle)
+            # curr_angle = p.getEulerFromQuaternion(curr_orn)[-1] # Pretty sure weve done everything in radians, if something is not working though, maybe our training data collected with degrees instead
+            curr_pos = t.tensor(curr_node.state, dtype=t.float32)
+            vector = np.array(curr_node.state) - np.array(prev_node.state)
+            curr_angle = t.tensor(np.arctan2(vector[1], vector[0]), dtype=t.float32) # Will return 0 if vector is [0,0] (this occurs on the first iteration when len < 1)
+
+
+            measurements = sim.localLidar(list(curr_pos)+[0], curr_angle)
+            obs = (curr_pos, curr_angle, measurements)
+            # Begin Sampling
+            iters = 0
+            while iters < max_iters:
+                # Generate Sample
+                goal_vec = tpf.to_body_frame(curr_pos[:2], t.tensor(self.end.state[:2], dtype=t.float32), curr_angle)
+                with t.no_grad():
+                    sample_bf = self.net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
+                sample = tpf.to_inertial_frame(curr_pos, sample_bf, curr_angle)
+
+                # sample = (2*np.random.rand(2)-1)*self.sampleArea
                 success = True
 
                 # Check if point is inside boundary and does not collide with any obstacles
@@ -536,6 +724,22 @@ def rrt_star(boundary, obstacles, start, goal, RRTs_params):
               maxReplan=RRTs_params['max_replan'],
               upsample_size=RRTs_params['downsample_size'])
     path = rrt.planning(animation=False)
+    return path
+
+def neural_rrt(boundary, obstacles, start, goal, RRTs_params, net):
+    rrt = RRT(start=start, 
+              goal=goal, 
+              boundary=boundary, 
+              obstacles=obstacles, 
+              sampleArea=RRTs_params['sample_bounds'], 
+              turtle_radius=RRTs_params['turtle_radius'], 
+              alg='rrtstar', 
+              dof=2, 
+              maxIter=RRTs_params['max_iters'],
+              maxReplan=RRTs_params['max_replan'],
+              upsample_size=RRTs_params['downsample_size'],
+              net=net)
+    path = rrt.neural_planning(animation=False)
     return path
     
 def main():
