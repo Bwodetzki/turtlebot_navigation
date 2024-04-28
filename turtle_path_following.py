@@ -140,7 +140,7 @@ def main(args):
                 if now - prevWaypointTime >= waypointGenerationPeriod:
                     prevWaypointTime = now
                     # Get waypoint
-                    goal_vec = to_body_frame(t.tensor(curr_pos[:2]), t.tensor(goal[:2].astype(np.float32)), t.tensor(curr_angle))
+                    goal_vec = to_body_frame(curr_pos[:2], t.tensor(goal[:2].astype(np.float32)), curr_angle)
                     with t.no_grad():
                         waypoint = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
                     waypoint = waypoint/t.linalg.norm(waypoint)
