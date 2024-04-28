@@ -37,40 +37,56 @@ def load_loss_data(filename):
         data = pickle.load(f)
     return data
 
-def batches(env_num_max, batch_size, test_size, starting_env_num=0):
+def RNNbatches(env_num_max, test_size, starting_env_num=0):
     newEnvFlag = False
+    newPathFlag = False
     batchIdx = 0
     for envIdx in range(starting_env_num, env_num_max+1):
         data_file = em.data_file_fpath(envIdx)
         datapoints = em.load_data_points(data_file=data_file)
-        datapoints = datapoints[:-test_size]
-        for batchStartIdx in range(0, len(datapoints), batch_size):
-            batchEndIdx = batchStartIdx + batch_size
-            batch = datapoints[batchStartIdx:batchEndIdx]
-            x, lidarMeasurements, targets = format_data(batch)  # Goal is to have x be only the goal vector...
-            yield (envIdx, batchIdx, newEnvFlag), x, lidarMeasurements, targets
-            newEnvFlag = False
-            batchIdx += 1
-        if batchStartIdx < len(datapoints):
-            yield (envIdx, batchIdx, newEnvFlag), x, lidarMeasurements, targets
-            newEnvFlag = False
-            batchIdx += 1
+        batchStartIdx = 0
+        for pathIdx in range(em.max_path_idx(envIdx)+1):
+            currPathFpath = em.path_file_fpath(envIdx, pathIdx)
+            currPathData = em.load_path(currPathFpath)
+            currPathDataPoints = currPathData[0]
+            currPathLength = len(currPathDataPoints)
+            batchEndIdx = batchStartIdx + currPathLength
+            for batchCurrIdx in range(batchStartIdx, batchEndIdx):
+                if batchCurrIdx < test_size or batchCurrIdx >= len(datapoints):
+                    continue
+                batch = datapoints[batchCurrIdx]
+                x, lidarMeasurements, targets = format_data([batch])  # Goal is to have x be only the goal vector...
+                yield (envIdx, batchIdx, newEnvFlag, newPathFlag), x, lidarMeasurements, targets
+                newEnvFlag = False
+                newPathFlag = False
+                batchIdx += 1
+            newPathFlag = True
+            batchStartIdx = batchEndIdx
+            if batchStartIdx >= len(datapoints):
+                break
         newEnvFlag = True
 
-def test_batches(envIdx, batch_size, test_size):
+def RNNtest_batches(envIdx, test_size):
     batchIdx = 0
     data_file = em.data_file_fpath(envIdx)
     datapoints = em.load_data_points(data_file=data_file)
-    datapoints = datapoints[-test_size:]
-    for batchStartIdx in range(0, len(datapoints), batch_size):
-        batchEndIdx = batchStartIdx + batch_size
-        batch = datapoints[batchStartIdx:batchEndIdx]
-        x, lidarMeasurements, targets = format_data(batch)  # Goal is to have x be only the goal vector...
-        yield (batchIdx), x, lidarMeasurements, targets
-        batchIdx += 1
-    if batchStartIdx < len(datapoints):
-        yield (batchIdx), x, lidarMeasurements, targets
-        batchIdx += 1
+    batchStartIdx = 0
+    for pathIdx in range(em.max_path_idx(envIdx)+1):
+        currPathFpath = em.path_file_fpath(envIdx, pathIdx)
+        currPathData = em.load_path(currPathFpath)
+        currPathDataPoints = currPathData[0]
+        currPathLength = len(currPathDataPoints)
+        batchEndIdx = batchStartIdx + currPathLength
+        for batchCurrIdx in range(batchStartIdx, batchEndIdx):
+            if batchCurrIdx > test_size:
+                break
+            batch = datapoints[batchCurrIdx]
+            x, lidarMeasurements, targets = format_data([batch])  # Goal is to have x be only the goal vector...
+            yield (batchIdx), x, lidarMeasurements, targets
+            batchIdx += 1
+        batchStartIdx = batchEndIdx
+        if batchStartIdx > test_size:
+            break
 
 def load_datapoints(env_num, env_num_max, test_size):
     # TODO: Make it load test size with a fraction or something
@@ -124,11 +140,11 @@ def main():
     # Definitions
     epochs = 1
     batch_size = 1
-    learning_rate = 1e-3
-    env_num_max = 550
+    learning_rate = 1e-4
+    env_num_max = 10
     freq = 1
     test_size = 100
-    run_num = 1
+    run_num = 50
     model_path = f"./RNNmodels/run{run_num}"
     load_policy=False
 
@@ -174,7 +190,7 @@ def main():
     hiddenState = t.zeros(30)
     with t.no_grad():
         curr_test_loss=0
-        for iterInfo, x, obs, true in test_batches(0, batch_size, test_size):
+        for iterInfo, x, obs, true in RNNtest_batches(0, test_size):
             batchIdx = iterInfo
             # Calculate test_loss
             predictions, hiddenState = network.forward(x, obs, hiddenState)
@@ -184,15 +200,19 @@ def main():
     network.train()
     optim.zero_grad()
 
-    hiddenState = t.zeros(30)
     for e in tqdm(range(epoch, epochs)):
-        for iterInfo, x, obs, true in tqdm(batches(10, batch_size, test_size, starting_env_num=0)):
-            envIdx, batchIdx, newEnvFlag = iterInfo
-            if batchIdx != 0 and batchIdx % 10 == 0:
-                loss.backward()
-                for p in network.parameters():
-                    p.grad.data = t.zeros_like(p.grad.data)
+        hiddenState = t.zeros(30)
+        for iterInfo, x, obs, true in tqdm(RNNbatches(env_num_max, test_size, starting_env_num=0)):
+            envIdx, batchIdx, newEnvFlag, newPathFlag = iterInfo
+            if batchIdx > 0 and (newEnvFlag or newPathFlag):
+                optim.step()
+                optim.zero_grad()
                 hiddenState = t.zeros(30)
+            # if batchIdx != 0 and batchIdx % 10 == 0:
+            #     loss.backward()
+            #     for p in network.parameters():
+            #         p.grad.data = t.zeros_like(p.grad.data)
+            #     hiddenState = t.zeros(30)
             # Calculate Loss
             predictions, hiddenState = network.forward(x, obs, hiddenState)
 
@@ -203,20 +223,24 @@ def main():
             loss = loss_fun(predictions, true)
             losses.append(loss)
 
-            # Step Parameters
-            loss.backward(retain_graph=True)
-            # optim.step()
+            # loss.backward(retain_graph=True)
+            # if newEnvFlag or newPathFlag:
+            #     for p in network.parameters():
+            #         try:
+            #             p.data.add_(p.grad.data, alpha=-learning_rate)
+            #             p.grad.data = t.zeros_like(p.grad.data)
+            #         except:
+            #             pass
+            #     hiddenState = t.zeros(30)
 
-            for p in network.parameters():
-                p.data.add_(p.grad.data, alpha=-learning_rate)
             # Reset Gradients in Optimizer
-            # optim.zero_grad()
+            loss.backward(retain_graph=True)
 
             if newEnvFlag:
                 network.eval()
                 with t.no_grad():
                     curr_test_loss=0
-                    for iterInfo, x, obs, true in test_batches(envIdx-1, batch_size, test_size):
+                    for iterInfo, x, obs, true in RNNtest_batches(envIdx-1, test_size):
                         batchIdx = iterInfo
                         # Calculate test_loss
                         predictions, hiddenState = network.forward(x, obs, hiddenState)
