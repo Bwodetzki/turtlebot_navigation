@@ -11,6 +11,8 @@ import env_generator as eg
 import env_manager as em
 import argparse as arg
 import time
+import SimpleRNNnetwork
+import RNNnetwork
 
 DEVICE = (
     "cuda"
@@ -57,6 +59,8 @@ def main(args):
     run = args.run
     env_num = args.env
     path_num = args.path
+    rnn = args.rnn
+    simple_rnn = args.simple_rnn
     corn = args.corn
     speed = 30
     eps = 1e-1
@@ -98,9 +102,21 @@ def main(args):
     t.set_default_device(DEVICE)
     print(f"Using {DEVICE} device")
 
+    model_path = None
     if run is not None:
-        net = PlanningNetwork()
-        model_path = model_path = f"./good_models/run{run}"
+        if rnn:
+            if simple_rnn:
+                print('Using simple RNN network')
+                net = SimpleRNNnetwork.PlanningNetwork(722, 30, 2)
+                model_path = f"./RNN_good_models/simpleModels/run{run}"
+            else:
+                print('Using RNN network')
+                net = RNNnetwork.PlanningNetwork()
+                model_path = f"./RNN_good_models/complicatedModels/run{run}"
+        else:
+            print('Using original network')
+            net = PlanningNetwork()
+            model_path = f"./good_models/run{run}"
         data = t.load(model_path, map_location=DEVICE)
 
         loss = data['loss']
@@ -134,15 +150,20 @@ def main(args):
         obs = (curr_pos, curr_angle, measurements)
 
         ## Controller Logic
+        hiddenState = t.zeros(30)
         if run is not None:  # Use network
             if corn==0:
                 now = time.time()
                 if now - prevWaypointTime >= waypointGenerationPeriod:
                     prevWaypointTime = now
                     # Get waypoint
-                    goal_vec = to_body_frame(curr_pos[:2], t.tensor(goal[:2].astype(np.float32)), curr_angle)
+                    goal_vec = to_body_frame(t.tensor(curr_pos[:2]), t.tensor(goal[:2].astype(np.float32)), t.tensor(curr_angle))
                     with t.no_grad():
-                        waypoint = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
+                        if rnn:
+                            waypoint, hiddenState = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1), hiddenState)
+                            waypoint = waypoint.flatten()
+                        else:
+                            waypoint = net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
                     waypoint = waypoint/t.linalg.norm(waypoint)
                     waypoint = to_inertial_frame(t.tensor(curr_pos[:2]), waypoint, t.tensor(curr_angle))
                     draw_waypoint=True
@@ -181,6 +202,8 @@ if __name__=='__main__':
     parser.add_argument('--run', type=int, default=None, help="The run of the model to be loaded, use None for no model")
     parser.add_argument('--env', type=int, default=None, help="The environment number to test the turtlebot in, use None to generate one")
     parser.add_argument('--path', type=int, default=None, help="The path in the environment, use None to generate one")
+    parser.add_argument('--rnn', action="store_true")
+    parser.add_argument('--simple_rnn', action="store_true")
     parser.add_argument('--corn', type=int, default=0, help="UNUSED: int(0, 1) The controller to be used, if not used default controller is used")
     args = parser.parse_args()
     main(args)
