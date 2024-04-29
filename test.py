@@ -120,7 +120,10 @@ def generate_test_data(args):
         if (env_num is not None) and (path_num is not None):
             path_num += 1
 
-        boundary, obstacles, start, goal = load_vars(env_num, path_num, params)
+        try:
+            boundary, obstacles, start, goal = load_vars(env_num, path_num, params)
+        except:
+            boundary, obstacles, start, goal = load_vars(env_num, path_num, params)
 
         if args.rrts:
             print('Starting RRT Planning')
@@ -196,8 +199,8 @@ if __name__ == "__main__":
     parser.add_argument('--env', type=int, default=None, help="The environment number to test the turtlebot in, use None to generate one")
     parser.add_argument('--path', type=int, default=None, help="The path in the environment, use None to generate one")
     parser.add_argument('--fname', type=str, default='test_data/general_test.pk', help="file to save data")
-    parser.add_argument('--rrts', type=int, default=1, help="whether or not to use rrtstar, 1 or 0")
-    parser.add_argument('--net', type=int, default=1, help="whether or not to use mpnet, 1 or 0")
+    parser.add_argument('--rrts', type=int, default=0, help="whether or not to use rrtstar, 1 or 0")
+    parser.add_argument('--net', type=int, default=0, help="whether or not to use mpnet, 1 or 0")
     parser.add_argument('--rnn', type=int, default=1, help="whether or not to use rnn, 1 or 0")
     args = parser.parse_args()
     generate_test_data(args)

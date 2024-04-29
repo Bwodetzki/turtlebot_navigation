@@ -170,7 +170,7 @@ class RRT():
 
         failcount = 0
         i = 0
-        while failcount < 11:
+        while failcount < 26:
             print(f'Neural Planning iteration: {i}')
             rnd = self.neural_sampler() # Sample with NN # Needs to get most recently sampled node in Tree
             nind = self.GetNearestListIndex(self.nodeList, rnd)
@@ -402,7 +402,7 @@ class RRT():
         """
 
 
-        if random.randint(0, 100) > 70:# self.goalSampleRate:
+        if random.randint(0, 100) > 40:# self.goalSampleRate:
             # Collect Lidar
             prev_node = self.nodeList[-2] if len(self.nodeList) > 1 else self.nodeList[-1]
             curr_node = self.nodeList[-1]

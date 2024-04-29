@@ -131,38 +131,45 @@ def turtlebot_anim():
         speed = speed + speed*i
 
 def environment_plotter():
-    env_nums = [2]
-    path_nums = [3]
+    env_nums = [1, 2, 3, 10, 11]
+    path_nums = [10, 4, 5]
 
-    use_sim = True
+    use_sim = False
     if use_sim:
         sim.create_sim(load_turtle=False)
 
     for env_num in env_nums:
+        env_path = Path(f"./envData/env{env_num}").absolute().resolve()
+        paths = []
         for path_num in path_nums:
-            # Load Environment
-            env_path = Path(f"./envData/env{env_num}").absolute().resolve()
+            # Load Path
+            path_file = env_path / f'path{path_num}' / 'path.dat'
+            path, angle = em.load_path(path_file)
+            paths.append(path)
 
-            obs_file = env_path / f'obstacles.dat'
-            boundary_file = env_path / f'boundary.dat'
+        # Load Environment
 
-            boundary, obstacles = em.load_env(boundary_file, obs_file, use_sim=use_sim)
+        obs_file = env_path / f'obstacles.dat'
+        boundary_file = env_path / f'boundary.dat'
+
+        boundary, obstacles = em.load_env(boundary_file, obs_file, use_sim=use_sim)
+        if use_sim:
             while(1):
                 sim.keyboard_control(10, 10, 10)
 
-            # Load Path
-            # path_file = env_path / f'path{path_num}' / 'path.dat'
-            # path, angle = em.load_path(path_file)
+        # Plot
+        fig, ax = plt.subplots()
+        em.plot_boundary(boundary, ax=ax)
+        for obstacle in obstacles:
+                em.plot_obstacle(obstacle, ax=ax)
+        for path in paths:
+            ax.plot(path[:, 0], path[:, 1], 'orange', marker='.')
+            ax.plot(path[-1, 0], path[-1, 1], 'ro')
+            ax.plot(path[0, 0], path[0, 1], 'ro')
 
-            # Plot
-            fig, ax = plt.subplots()
-            em.plot_boundary(boundary, ax=ax)
-            for obstacle in obstacles:
-                    em.plot_obstacle(obstacle, ax=ax)
-            # ax.plot(path[:, 0], path[:, 1], 'ro-')
-
-            # ax.set_title(f'Env {env_num}, Path {path_num}')
-            plt.show()
+        # ax.set_title(f'Env {env_num}, Path {path_num}')
+        ax.set_title(f'Example Environment')
+        plt.show()
 
 if __name__=="__main__":
     environment_plotter()
