@@ -47,7 +47,7 @@ class RRT():
     Class for RRT Planning
     """
 
-    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5, upsample_size=3, net=None):
+    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5, upsample_size=3, net=None, rnn=False):
         """
         Sets algorithm parameters
 
@@ -75,6 +75,7 @@ class RRT():
         self.solutionSet = set()
         self.upsample_size = upsample_size
         self.net = net
+        self.rnn = rnn
 
     def planning(self, animation=False):
         """
@@ -390,7 +391,7 @@ class RRT():
 
         return rnd
 
-    def neural_sampler(self, max_iters=1000):
+    def neural_sampler(self, max_iters=1000, rnn=False):
         """
         Randomly generates a sample, to be used as a new node.
         This sample may be invalid - if so, call generatesample() again.
@@ -399,6 +400,7 @@ class RRT():
 
         returns: random c-space vector
         """
+
 
         if random.randint(0, 100) > 70:# self.goalSampleRate:
             # Collect Lidar
@@ -415,11 +417,18 @@ class RRT():
             obs = (curr_pos, curr_angle, measurements)
             # Begin Sampling
             iters = 0
+            hiddenState = t.zeros(30)
             while iters < max_iters:
                 # Generate Sample
                 goal_vec = tpf.to_body_frame(curr_pos[:2], t.tensor(self.end.state[:2], dtype=t.float32), curr_angle)
                 with t.no_grad():
-                    sample_bf = self.net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
+                    if rnn:
+                        waypoint, hiddenState = self.net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1), hiddenState)
+                        waypoint = waypoint.flatten()
+                    else:
+                        sample_bf = self.net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
+                
+
                 sample = tpf.to_inertial_frame(curr_pos, sample_bf, curr_angle)
 
                 # sample = (2*np.random.rand(2)-1)*self.sampleArea
@@ -726,7 +735,7 @@ def rrt_star(boundary, obstacles, start, goal, RRTs_params):
     path = rrt.planning(animation=False)
     return path
 
-def neural_rrt(boundary, obstacles, start, goal, RRTs_params, net):
+def neural_rrt(boundary, obstacles, start, goal, RRTs_params, net, rnn):
     rrt = RRT(start=start, 
               goal=goal, 
               boundary=boundary, 
@@ -738,7 +747,8 @@ def neural_rrt(boundary, obstacles, start, goal, RRTs_params, net):
               maxIter=RRTs_params['max_iters'],
               maxReplan=RRTs_params['max_replan'],
               upsample_size=RRTs_params['downsample_size'],
-              net=net)
+              net=net,
+              rnn=rnn)
     path = rrt.neural_planning(animation=False)
     return path
     

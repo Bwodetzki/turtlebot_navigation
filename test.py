@@ -1,4 +1,5 @@
 import pickle
+import RNNnetwork
 import torch as t
 import numpy as np
 import pybullet as p
@@ -28,9 +29,9 @@ def RRT_star(boundary, obstacles, start, goal, RRTs_params):  # Change RRTS_para
     success = 1 if path is not None else 0 # May not return None
     return success, path
 
-def informed_sampling(boundary, obstacles, start, goal, RRTs_params, net):
+def informed_sampling(boundary, obstacles, start, goal, RRTs_params, net, rnn):
     try:
-        path = neural_rrt(boundary, obstacles, start, goal, RRTs_params, net)
+        path = neural_rrt(boundary, obstacles, start, goal, RRTs_params, net, rnn)
     except:
         path = None
     success = 1 if path is not None else 0
@@ -75,7 +76,7 @@ def load_vars(env_num, path_num, params):
 def generate_test_data(args):
     run = 2 # net to use
     env_num = args.env
-    path_num = args.path
+    path_num = args.path - 1 if args.path is not None else None
     # corn = args.corn
     num_its = 1000 # CHANGEME
 
@@ -95,44 +96,55 @@ def generate_test_data(args):
         print(f'Validation loss of model is {loss:0.4f}')
         net.load_state_dict(data['network_params'])
 
+    rnn_net = RNNnetwork.PlanningNetwork()
+    model_path = model_path = f"./RNN_good_models/complicatedModels/run6"
+    data = t.load(model_path, map_location=DEVICE)
+
+    loss = data['loss']
+    print(f'Validation loss of RNN model is {loss:0.4f}')
+    rnn_net.load_state_dict(data['network_params'])
+
     RRT_star_data = []
     MPNET_data = []
     RNN_data = []
 
-    change_env = False
+    paths_per_env = 3
+    change_env = True
     change_path = True
     for i in range(num_its):
         # Step env_num if applicable
         if env_num is not None:
-            if change_env:
+            if change_env and path_num >= paths_per_env:
                 env_num += 1
+                path_num = -1
         if (env_num is not None) and (path_num is not None):
             path_num += 1
 
-        # env_num = env_num+1 if env_num is not None else None
-        # path_num = path_num+1 if env_num is not None else None
-
         boundary, obstacles, start, goal = load_vars(env_num, path_num, params)
 
-        print('Starting RRT Planning')
-        start_t = timer()
-        success, path = RRT_star(boundary, obstacles, start, goal, RRTs_params)
-        end_t = timer()
-        rrts_data = [success, end_t-start_t]
-        RRT_star_data.append(rrts_data)
+        if args.rrts:
+            print('Starting RRT Planning')
+            start_t = timer()
+            success, path = RRT_star(boundary, obstacles, start, goal, RRTs_params)
+            end_t = timer()
+            rrts_data = [success, end_t-start_t]
+            RRT_star_data.append(rrts_data)
 
-        print('Starting Informed Planning')
-        start_t = timer()
-        success, path = informed_sampling(boundary, obstacles, start, goal, RRTs_params, net)
-        end_t = timer()
-        mpnet_data = [success, end_t-start_t]
-        MPNET_data.append(mpnet_data)
+        if args.net:
+            print('Starting Informed Planning')
+            start_t = timer()
+            success, path = informed_sampling(boundary, obstacles, start, goal, RRTs_params, net, rnn=False)
+            end_t = timer()
+            mpnet_data = [success, end_t-start_t]
+            MPNET_data.append(mpnet_data)
 
-        # start_t = timer()
-        # success, path = informed_sampling(rnn)
-        # end_t = timer()
-        # rnn_data = [success, end_t-start_t]
-        # RNN_data.append(rnn_data)
+        if args.rnn:
+            print('Starting RNN Informed Planning')
+            start_t = timer()
+            success, path = informed_sampling(boundary, obstacles, start, goal, RRTs_params, rnn_net, rnn=True)
+            end_t = timer()
+            rnn_data = [success, end_t-start_t]
+            RNN_data.append(rnn_data)
 
         # # Plot Path Found
         # # This is our boundary
@@ -149,8 +161,16 @@ def generate_test_data(args):
         # ax.plot(path[:, 0], path[:, 1], 'ro-')
         # plt.show()
 
+    data_list = []
+    if args.rrts:
+        data_list.append(RRT_star_data)
+    if args.net:
+        data_list.append(MPNET_data)
+    if args.rnn:
+        data_list.append(RNN_data)
     # data_list = [RRT_star_data, MPNET_data, RNN_data]
-    data_list = [RRT_star_data, MPNET_data]
+    # data_list = [RRT_star_data, MPNET_data]
+    # data_list = [RNN_data,]
     success_percs = []
     time_stats = []
     for data in data_list:
@@ -164,7 +184,7 @@ def generate_test_data(args):
         time_stats.append([time_mean, time_sigma])
 
     # Save Data
-    fname='test_data/data_1000_random_all.pk'
+    fname=args.fname # 'test_data/rnn_.pk'
     data_store = (success_percs, time_stats, data_list)
     with open(fname, 'wb') as f: # create file if needed
         pickle.dump(data_store, f)
@@ -173,8 +193,11 @@ def generate_test_data(args):
     
 if __name__ == "__main__":
     parser = arg.ArgumentParser()
-    parser.add_argument('--run', type=int, default=None, help="The run of the model to be loaded, use None for no model")
     parser.add_argument('--env', type=int, default=None, help="The environment number to test the turtlebot in, use None to generate one")
     parser.add_argument('--path', type=int, default=None, help="The path in the environment, use None to generate one")
+    parser.add_argument('--fname', type=str, default='test_data/general_test.pk', help="file to save data")
+    parser.add_argument('--rrts', type=int, default=1, help="whether or not to use rrtstar, 1 or 0")
+    parser.add_argument('--net', type=int, default=1, help="whether or not to use mpnet, 1 or 0")
+    parser.add_argument('--rnn', type=int, default=1, help="whether or not to use rnn, 1 or 0")
     args = parser.parse_args()
     generate_test_data(args)
