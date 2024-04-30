@@ -29,9 +29,9 @@ def RRT_star(boundary, obstacles, start, goal, RRTs_params):  # Change RRTS_para
     success = 1 if path is not None else 0 # May not return None
     return success, path
 
-def informed_sampling(boundary, obstacles, start, goal, RRTs_params, net, rnn):
+def informed_sampling(boundary, obstacles, start, goal, RRTs_params, net, rnn, use_rrt):
     try:
-        path = neural_rrt(boundary, obstacles, start, goal, RRTs_params, net, rnn)
+        path = neural_rrt(boundary, obstacles, start, goal, RRTs_params, net, rnn, use_rrt)
     except:
         path = None
     success = 1 if path is not None else 0
@@ -136,7 +136,7 @@ def generate_test_data(args):
         if args.net:
             print('Starting Informed Planning')
             start_t = timer()
-            success, path = informed_sampling(boundary, obstacles, start, goal, RRTs_params, net, rnn=False)
+            success, path = informed_sampling(boundary, obstacles, start, goal, RRTs_params, net, rnn=False, use_rrt=args.use_rrt)
             end_t = timer()
             mpnet_data = [success, end_t-start_t]
             MPNET_data.append(mpnet_data)
@@ -144,7 +144,7 @@ def generate_test_data(args):
         if args.rnn:
             print('Starting RNN Informed Planning')
             start_t = timer()
-            success, path = informed_sampling(boundary, obstacles, start, goal, RRTs_params, rnn_net, rnn=True)
+            success, path = informed_sampling(boundary, obstacles, start, goal, RRTs_params, rnn_net, rnn=True, use_rrt=args.use_rrt)
             end_t = timer()
             rnn_data = [success, end_t-start_t]
             RNN_data.append(rnn_data)
@@ -202,5 +202,6 @@ if __name__ == "__main__":
     parser.add_argument('--rrts', type=int, default=0, help="whether or not to use rrtstar, 1 or 0")
     parser.add_argument('--net', type=int, default=0, help="whether or not to use mpnet, 1 or 0")
     parser.add_argument('--rnn', type=int, default=1, help="whether or not to use rnn, 1 or 0")
+    parser.add_argument('--use_rrt', type=int, default=1, help="whether or not to use rrt with the networks, 1 or 0")
     args = parser.parse_args()
     generate_test_data(args)

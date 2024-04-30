@@ -47,7 +47,7 @@ class RRT():
     Class for RRT Planning
     """
 
-    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5, upsample_size=3, net=None, rnn=False):
+    def __init__(self, start, goal, boundary, obstacles, sampleArea, turtle_radius, alg, dof=2, expandDis=0.05, goalSampleRate=5, maxIter=50, maxReplan=5, upsample_size=3, net=None, rnn=False, use_rrt=False):
         """
         Sets algorithm parameters
 
@@ -76,6 +76,10 @@ class RRT():
         self.upsample_size = upsample_size
         self.net = net
         self.rnn = rnn
+        self.hiddenState = t.zeros(30)
+        self.use_rrt = use_rrt
+        self.total_failcount = 11 if use_rrt else 26
+        self.goalSampleRate_mod = 70 if use_rrt else 40
 
     def planning(self, animation=False):
         """
@@ -170,7 +174,7 @@ class RRT():
 
         failcount = 0
         i = 0
-        while failcount < 26:
+        while failcount < self.total_failcount:
             print(f'Neural Planning iteration: {i}')
             rnd = self.neural_sampler() # Sample with NN # Needs to get most recently sampled node in Tree
             nind = self.GetNearestListIndex(self.nodeList, rnd)
@@ -223,7 +227,7 @@ class RRT():
                 failcount+=1
             i+=1
         
-        if self.get_path_to_goal() is None:
+        if self.use_rrt and (self.get_path_to_goal() is None):
             break_flag=False
             counter = 0
             for i in range(self.maxIter):
@@ -391,7 +395,7 @@ class RRT():
 
         return rnd
 
-    def neural_sampler(self, max_iters=1000, rnn=False):
+    def neural_sampler(self, max_iters=1000):
         """
         Randomly generates a sample, to be used as a new node.
         This sample may be invalid - if so, call generatesample() again.
@@ -401,8 +405,7 @@ class RRT():
         returns: random c-space vector
         """
 
-
-        if random.randint(0, 100) > 40:# self.goalSampleRate:
+        if random.randint(0, 100) > self.goalSampleRate_mod:
             # Collect Lidar
             prev_node = self.nodeList[-2] if len(self.nodeList) > 1 else self.nodeList[-1]
             curr_node = self.nodeList[-1]
@@ -417,14 +420,13 @@ class RRT():
             obs = (curr_pos, curr_angle, measurements)
             # Begin Sampling
             iters = 0
-            hiddenState = t.zeros(30)
             while iters < max_iters:
                 # Generate Sample
                 goal_vec = tpf.to_body_frame(curr_pos[:2], t.tensor(self.end.state[:2], dtype=t.float32), curr_angle)
                 with t.no_grad():
-                    if rnn:
-                        waypoint, hiddenState = self.net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1), hiddenState)
-                        waypoint = waypoint.flatten()
+                    if self.rnn:
+                        sample_bf, hiddenState = self.net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1), self.hiddenState)
+                        sample_bf = sample_bf.flatten()
                     else:
                         sample_bf = self.net(goal_vec.reshape(1,-1), t.tensor(measurements).reshape(1,-1)).flatten()
                 
@@ -447,7 +449,9 @@ class RRT():
                 iters+=1
             if (iters >= max_iters):  # Did not converge to the start position in the given # of iterations
                 raise Exception("RRT Failed to Sample Points")
-
+            
+            if self.rnn:
+                self.hiddenState = hiddenState
             rnd = Node(sample)
         else:
             rnd = self.end
@@ -735,7 +739,7 @@ def rrt_star(boundary, obstacles, start, goal, RRTs_params):
     path = rrt.planning(animation=False)
     return path
 
-def neural_rrt(boundary, obstacles, start, goal, RRTs_params, net, rnn):
+def neural_rrt(boundary, obstacles, start, goal, RRTs_params, net, rnn, use_rrt):
     rrt = RRT(start=start, 
               goal=goal, 
               boundary=boundary, 
@@ -748,7 +752,8 @@ def neural_rrt(boundary, obstacles, start, goal, RRTs_params, net, rnn):
               maxReplan=RRTs_params['max_replan'],
               upsample_size=RRTs_params['downsample_size'],
               net=net,
-              rnn=rnn)
+              rnn=rnn,
+              use_rrt=use_rrt)
     path = rrt.neural_planning(animation=False)
     return path
     
